@@ -1,0 +1,332 @@
+# Context `roadmap` — cây 5 tầng + bản đồ game + bookmark.
+#
+# Cây đọc bằng dataloader: `Path.stages` → `Stage.topics` / `Stage.milestones` /
+# `Topic.resources` là 4 loader riêng, mỗi loader gom TOÀN BỘ key của request
+# thành 1 SQL. Xem `internal/transport/graphql/dataloader.go`.
+#
+# `Topic.level` và `Topic.point` KHÔNG tính ở resolver: application service
+# `GetPath` đã gọi `domain/roadmap.LevelStates` + `ComputeLayout` và đóng gói
+# kèm trong `TopicView` (xem `application/roadmap/service.go` GetPath). Resolver
+# chỉ đọc — tính lại ở đây là 2 bản luật layout trôi khỏi nhau, đúng loại bug
+# đã xảy ra khi ghép theo chỉ số thay vì theo id.
+
+type Path {
+  id: ID!
+  guid: String!
+  slug: String!
+  title: String!
+  overview: String!
+  language: String!
+  """true = seed tích hợp, UI không cho sửa/xoá."""
+  isBuiltin: Boolean!
+  createdAt: String!
+  updatedAt: String!
+  """Loader: 1 SQL cho mọi path trong request."""
+  stages: [Stage!]!
+  progress: Progress!
+}
+
+type Stage {
+  id: ID!
+  guid: String!
+  pathId: ID!
+  slug: String!
+  title: String!
+  goal: String!
+  position: Int!
+  durationWeeks: Int!
+  status: Status!
+  statusNote: String!
+  """Mốc hoàn thành (RFC3339). Set khi vào `done`, CLEAR khi rời `done` — luật của `domain/roadmap.SetStatus`."""
+  completedAt: String
+  """Deck gắn ôn (A1). null = chưa gắn."""
+  deckId: ID
+  terrain: Terrain!
+  direction: Direction!
+  createdAt: String!
+  updatedAt: String!
+
+  """Loader: 1 SQL cho mọi stage trong request."""
+  topics: [Topic!]!
+  """Loader: 1 SQL cho mọi stage trong request."""
+  milestones: [Milestone!]!
+  """Loader: 1 SQL cho mọi deck_id trong request. null = stage chưa gắn deck HOẶC deck đã xoá mềm."""
+  deck: DeckRef
+}
+
+"""Thông tin deck rút gọn cho nút "vào /review" — cần TÊN thật, không phải id."""
+type DeckRef {
+  id: ID!
+  name: String!
+  lang: String!
+}
+
+type Topic {
+  id: ID!
+  guid: String!
+  stageId: ID!
+  title: String!
+  why: String!
+  """JSON array string thô như lưu trong DB. Dùng `activities` nếu cần mảng đã tách."""
+  activities: String!
+  """activities đã parse thành mảng. Rỗng khi cột rỗng (không phải "[]")."""
+  activityList: [String!]!
+  position: Int!
+  status: Status!
+  statusNote: String!
+  completedAt: String
+  """true = node tham khảo, KHÔNG tính vào mẫu số phần trăm (A1)."""
+  isOptional: Boolean!
+  """Toạ độ node do user đặt tay, null = server layout. Node ở (0,0) là vị trí hợp lệ nên phải dùng null chứ không dùng 0."""
+  mapX: Float
+  mapY: Float
+  createdAt: String!
+  updatedAt: String!
+
+  """Trạng thái node suy ra từ chuỗi node trước đó TRONG CÙNG stage. Lấy từ application service, không tính lại ở đây."""
+  level: LevelState!
+  """Toạ độ node trong viewBox 0 0 1000 2000, do `domain/roadmap.ComputeLayout` tính."""
+  point: MapPoint!
+  """true = user đã đặt tay toạ độ (mapX/mapY khác null)."""
+  mapPinned: Boolean!
+
+  """Loader: 1 SQL cho mọi topic trong request."""
+  resources: [Resource!]!
+}
+
+"""Toạ độ node trên canvas bản đồ."""
+type MapPoint {
+  x: Float!
+  y: Float!
+}
+
+type Resource {
+  id: ID!
+  guid: String!
+  topicId: ID!
+  title: String!
+  """null = tài liệu không có link. Xoá link dùng `clearUrl` chứ không gửi chuỗi rỗng."""
+  url: String
+  kind: ResourceKind!
+  note: String!
+  position: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Milestone {
+  id: ID!
+  guid: String!
+  stageId: ID!
+  text: String!
+  position: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""Tiến độ 1 path. `percent` CHỈ tính topic bắt buộc — node optional không nằm trong mẫu số (A1)."""
+type Progress {
+  stages: Int!
+  topicsTotal: Int!
+  topicsRequired: Int!
+  topicsOptional: Int!
+  topicsDone: Int!
+  topicsInProgress: Int!
+  topicsLocked: Int!
+  percent: Int!
+  lastCompletedAt: String
+  """Số node bắt buộc hoàn thành trong [since, now). 0 khi không truyền `since`."""
+  completedInRange: Int!
+}
+
+"""1 dòng của list path, kèm tiến độ rút gọn (UI hiện "2/25 · 8%" ngay trong danh sách)."""
+type PathSummary {
+  path: Path!
+  summary: ProgressSummary!
+}
+
+type ProgressSummary {
+  stages: Int!
+  topicsTotal: Int!
+  topicsRequired: Int!
+  topicsDone: Int!
+  topicsInProgress: Int!
+  percent: Int!
+}
+
+input PathInput {
+  """[a-z0-9-], 1..64. Trùng → 409."""
+  slug: String!
+  title: String!
+  overview: String
+  """Rỗng = "zh". User tạo path thì nhận chuỗi tự do tối đa 16 ký tự (vd "vi")."""
+  language: String
+}
+
+"""PATCH. Không có `slug`: slug là natural key của seed, đổi nó khiến seed tạo path trùng ở lần boot sau."""
+input PathPatch {
+  title: String
+  overview: String
+  language: String
+}
+
+input StageInput {
+  slug: String!
+  title: String!
+  goal: String
+  """null = max+1, giữ hành vi v1 (thêm node liên tiếp không phải tự đếm)."""
+  position: Int
+  durationWeeks: Int
+  status: Status
+  deckId: ID
+  """Rỗng = lấy DEFAULT của cột (plain/up)."""
+  terrain: Terrain
+  direction: Direction
+}
+
+"""PATCH. `terrain`/`direction` null = KHÔNG đụng — PATCH phân biệt "không gửi" với "gửi rỗng" (rỗng sẽ ra DEFAULT)."""
+input StagePatch {
+  title: String
+  goal: String
+  position: Int
+  durationWeeks: Int
+  deckId: ID
+  terrain: Terrain
+  direction: Direction
+}
+
+input TopicInput {
+  title: String!
+  why: String
+  activities: [String!]
+  position: Int
+  """0 = bắt buộc, 1 = tham khảo. null = 0 (bắt buộc), khớp DEFAULT của cột."""
+  isOptional: Int
+  """null = để server layout. Ngoài viewBox 0 0 1000 2000 bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được)."""
+  mapX: Float
+  mapY: Float
+}
+
+input TopicPatch {
+  title: String
+  why: String
+  activities: [String!]
+  position: Int
+  isOptional: Int
+  mapX: Float
+  mapY: Float
+  """Xoá mapX+mapY (NULL thật, không phải 0) để đưa node về auto-layout. Thắng mọi giá trị mapX/mapY trong cùng patch."""
+  clearMap: Boolean
+}
+
+input ResourceInput {
+  title: String!
+  url: String
+  """Rỗng = tài liệu không phân loại. Ngoài whitelist 9 kind bị từ chối 400."""
+  kind: ResourceKind
+  note: String
+  position: Int
+}
+
+"""PATCH. URL rỗng KHÔNG phải "xoá link" — dùng `clearUrl`, vì `url: String` không phân biệt được absent với null."""
+input ResourcePatch {
+  title: String
+  url: String
+  kind: ResourceKind
+  note: String
+  position: Int
+  clearUrl: Boolean
+}
+
+input MilestoneInput {
+  text: String!
+  position: Int
+}
+
+input MilestonePatch {
+  text: String
+  position: Int
+}
+
+input StatusInput {
+  status: Status!
+  statusNote: String
+}
+
+type CreatePathPayload { ok: Boolean!, path: Path, error: UserError }
+type UpdatePathPayload { ok: Boolean!, path: Path, error: UserError }
+type DeletePathPayload { ok: Boolean!, error: UserError }
+type CreateStagePayload { ok: Boolean!, stage: Stage, error: UserError }
+type UpdateStagePayload { ok: Boolean!, stage: Stage, error: UserError }
+type DeleteStagePayload { ok: Boolean!, error: UserError }
+type SetStageStatusPayload { ok: Boolean!, stage: Stage, error: UserError }
+type CreateTopicPayload { ok: Boolean!, topic: Topic, error: UserError }
+type UpdateTopicPayload { ok: Boolean!, topic: Topic, error: UserError }
+type DeleteTopicPayload { ok: Boolean!, error: UserError }
+type SetTopicStatusPayload { ok: Boolean!, topic: Topic, error: UserError }
+type CreateResourcePayload { ok: Boolean!, resource: Resource, error: UserError }
+type UpdateResourcePayload { ok: Boolean!, resource: Resource, error: UserError }
+type DeleteResourcePayload { ok: Boolean!, error: UserError }
+type CreateMilestonePayload { ok: Boolean!, milestone: Milestone, error: UserError }
+type UpdateMilestonePayload { ok: Boolean!, milestone: Milestone, error: UserError }
+type DeleteMilestonePayload { ok: Boolean!, error: UserError }
+
+# ── Bookmark ────────────────────────────────────────────────────────────────
+#
+# Kho link độc lập (amendment A1 — STACK-V2-PLAN §5): KHÔNG thuộc cây roadmap,
+# không có `position` và không có `completedAt`. Thứ tự là thứ tự thêm
+# (`id` tăng dần) — sửa bookmark không đổi vị trí trong danh sách.
+
+"""4 trạng thái kho link. KHÁC `Status` của node roadmap: bookmark không nằm trên đường đi nên không có `not_started`/`skipped`; đọc xong là `DONE`, không còn giá trị thì `ARCHIVED`. CHECK ở DB là backstop."""
+enum BookmarkStatus {
+  """Chưa đọc — DEFAULT khi tạo."""
+  TO_READ
+  """Đang đọc."""
+  READING
+  """Đã đọc xong."""
+  DONE
+  """Cất đi, không đọc nữa."""
+  ARCHIVED
+}
+
+type Bookmark {
+  id: ID!
+  """Khoá định danh cho sync — mọi type khác cũng có, client dùng để nhận ra row đã có trên máy peer."""
+  guid: String!
+  title: String!
+  """null = bookmark không có link (ghi chú tự nhớ chẳng có link nào). Xoá link dùng `clearUrl` chứ không gửi chuỗi rỗng."""
+  url: String
+  note: String!
+  """Tag dạng CSV thô như lưu trong DB. Dùng `tagList` nếu cần mảng đã tách."""
+  tags: String!
+  """Tag đã tách thành mảng. Rỗng khi cột rỗng (không phải [""]); luôn hạ chữ thường + trim."""
+  tagList: [String!]!
+  status: BookmarkStatus!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input BookmarkInput {
+  title: String!
+  url: String
+  note: String
+  """Tag: trim + hạ chữ thường + bỏ trùng, tối đa 10 tag × 40 ký tự. Tag chứa dấu phẩy bị từ chối (dấu phẩy là ký tự phân cách của cột CSV)."""
+  tags: [String!]
+  """null = TO_READ."""
+  status: BookmarkStatus
+}
+
+"""PATCH. `url` rỗng KHÔNG phải "xoá link" — dùng `clearUrl`, vì `url: String` không phân biệt được absent với null."""
+input BookmarkPatch {
+  title: String
+  url: String
+  note: String
+  tags: [String!]
+  clearUrl: Boolean
+}
+
+type CreateBookmarkPayload { ok: Boolean!, bookmark: Bookmark, error: UserError }
+type UpdateBookmarkPayload { ok: Boolean!, bookmark: Bookmark, error: UserError }
+type DeleteBookmarkPayload { ok: Boolean!, error: UserError }
+type SetBookmarkStatusPayload { ok: Boolean!, bookmark: Bookmark, error: UserError }
+type PathProgressPayload { ok: Boolean!, progress: Progress, error: UserError }

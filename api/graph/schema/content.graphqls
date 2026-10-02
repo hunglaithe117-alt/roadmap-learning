@@ -1,0 +1,159 @@
+# Context `content` — tra từ điển Trung/Anh, HSK, nét chữ, chunk, PVO, THIEU, reader.
+
+type DictEntry {
+  hanzi: String!
+  pinyin: String!
+  nghia: String!
+}
+
+type EnglishEntry {
+  lang: String!
+  term: String!
+  reading: String!
+  gloss: String!
+}
+
+"""Kết quả chấm thanh điệu — quy tắc nằm ở `domain/content.GradeTonePair`."""
+type ToneGrade {
+  """Điểm SRS 1-4 theo tỉ lệ trùng: trùng hết = 4, >= 1/2 = 3, …"""
+  grade: Int!
+  """Tỉ lệ âm tiết trùng (0-1)."""
+  score: Float!
+  exact: Boolean!
+  hit: Int!
+}
+
+"""Kết quả tra trọng âm. `fromDict = false` nghĩa là đoán bằng bộ quy tắc hậu tố, UI phải gắn nhãn "ngoại lệ"."""
+type StressLookup {
+  term: String!
+  ipa: String!
+  """Pattern in HOA âm tiết có trọng âm, nối bằng "-" (pho-TO-graph)."""
+  stress: String!
+  exception: Boolean!
+  note: String!
+  fromDict: Boolean!
+}
+
+type StrokeIndexEntry {
+  hanzi: String!
+  strokeCount: Int!
+}
+
+type StrokeStep {
+  order: Int!
+  code: String!
+  name: String!
+}
+
+type StrokeInfo {
+  hanzi: String!
+  pinyinMarks: String!
+  level: String!
+  strokeCount: Int!
+  steps: [StrokeStep!]!
+}
+
+"""Loại từ sau khi chunking: nội dung (đọc mạnh) hay chức năng (đọc nhẹ)."""
+enum ChunkKind {
+  CONTENT
+  FUNCTION
+}
+
+"""1 từ của câu đã tách. Quy tắc cố ý đơn giản: KHÔNG phân giải từ đa nghĩa hay ngữ cảnh cụm từ (xem `domain/content.SplitChunks`)."""
+type Chunk {
+  text: String!
+  kind: ChunkKind!
+}
+
+"""1 trục checklist THIEU (A-H) kèm rubric tiếng Việt."""
+type ThieuAxis {
+  """Mã trục A..H."""
+  code: String!
+  name: String!
+  desc: String!
+}
+
+type ThieuScore {
+  axis: String!
+  """Điểm thang 1-5."""
+  value: Int!
+}
+
+"""1 buổi chấm checklist — lưu trong `notes` với prefix THIEU|."""
+type ThieuSession {
+  id: ID!
+  """Ngày UTC (YYYY-MM-DD)."""
+  session: String!
+  """Điểm 8 trục. Thiếu trục nào = 400 (bản chấm 4/8 trục không có nghĩa checklist)."""
+  scores: [ThieuScore!]!
+  average: Float!
+  note: String!
+  createdAt: String!
+}
+
+type ReaderArticle {
+  id: String!
+  level: String!
+  lang: String!
+  title: String!
+  text: String!
+  source: String!
+}
+
+"""Báo cáo import HSK — 5 trường giữ nguyên như endpoint v1."""
+type ImportResult {
+  deckId: ID!
+  deck: String!
+  level: String!
+  cardsAdded: Int!
+  cardsTotal: Int!
+  dictAdded: Int!
+}
+
+"""Báo cáo seed tiếng Anh (3 số, giữ nguyên v1)."""
+type EnglishSeedResult {
+  enDict: Int!
+  pvoAdded: Int!
+  tmrndAdded: Int!
+}
+
+input ThieuScoreInput {
+  axis: String!
+  value: Int!
+}
+
+input ThieuInput {
+  """Rỗng = ngày UTC hôm nay (YYYY-MM-DD), giữ hành vi v1."""
+  session: String
+  """Phải đủ 8 trục."""
+  scores: [ThieuScoreInput!]!
+  note: String
+}
+
+input ImportHSKInput {
+  """Mặc định HSK1 (giữ hành vi v1)."""
+  level: String
+  """Rỗng = trùng `level`. Deck KHÁC level bị từ chối 400: khoá hợp nhất là (deck_id, front), đổi tên deck cho cùng 1 level sẽ nhân đôi mọi thẻ khi merge."""
+  deck: String
+}
+
+input DictEntryInput {
+  hanzi: String!
+  pinyin: String!
+  nghia: String!
+}
+
+type UpsertDictPayload {
+  ok: Boolean!
+  entry: DictEntry
+  """true = chữ mới; false = đã có nên nội dung cũ KHÔNG bị ghi đè (người dùng sửa nghĩa thì import lại không được xoá)."""
+  created: Boolean!
+  error: UserError
+}
+type ImportHSKPayload { ok: Boolean!, result: ImportResult, error: UserError }
+type SeedEnglishPayload { ok: Boolean!, result: EnglishSeedResult, error: UserError }
+type SetTonePayload { ok: Boolean!, cardId: ID!, tone: String, error: UserError }
+type AppendThieuPayload { ok: Boolean!, session: ThieuSession, error: UserError }
+type ChunkPayload { ok: Boolean!, chunks: [Chunk!]!, error: UserError }
+type GradeTonePayload { ok: Boolean!, grade: ToneGrade, error: UserError }
+type StrokePayload { ok: Boolean!, index: [StrokeIndexEntry!]!, info: StrokeInfo, error: UserError }

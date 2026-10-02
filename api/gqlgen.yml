@@ -1,0 +1,49 @@
+# gqlgen — schema-first, generated code nằm trong internal/transport/graphql.
+#
+# Vì sao generated code KHÔNG nằm cạnh schema: schema là INPUT của codegen (đọc
+# bởi người, bởi code-gen, bởi client để đọc offline), còn generated.go là
+# OUTPUT (18k dòng, không ai đọc). Trộn 2 thứ khiến việc "đọc schema" của người
+# sau phải lướt qua file máy sinh. Giữ `graph/schema/*.graphqls` làm nguồn,
+# `internal/transport/graphql/` làm chỗ build ra.
+#
+# Chạy lại: `go generate ./internal/transport/graphql/...`
+
+schema:
+  - graph/schema/*.graphqls
+
+exec:
+  filename: internal/transport/graphql/generated/generated.go
+  package: generated
+
+model:
+  filename: internal/transport/graphql/model/models_gen.go
+  package: model
+
+# `autobind` trỏ vào package model: gqlgen sẽ KHÔNG sinh lại `Path`, `Stage`,
+# `Topic` mà dùng 3 struct viết tay ở `model/tree.go`.
+#
+# Vì sao phải autobind: nếu model có sẵn field `Stages []Stage` thì gqlgen đọc
+# thẳng field đó và KHÔNG sinh resolver — tức dataloader của `Path.stages` không
+# bao giờ chạy và cây roadmap quay lại N+1. Bỏ field khỏi model là cách buộc
+# resolver, và resolver gọi `Loaders`. Chi tiết ở doc của `model/tree.go`.
+autobind:
+  - langapp/internal/transport/graphql/model
+
+# Resolver là tay viết: gqlgen sinh stub, code trong `*.resolvers.go` là của ta.
+resolver:
+  layout: follow-schema
+  dir: internal/transport/graphql
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+
+omit_slice_element_pointers: true
+omit_getters: true
+
+# KHÔNG dùng `dataloader:` builtin của gqlgen (dataloaden). Cây roadmap cần
+# batch 5 loader theo key NHIỀU TẦNG (path → stage → topic → resource) và mỗi
+# loader phải trả về danh sách con đã gom sẵn, không phải map key→value — mẫu
+# generic của dataloaden làm đúng việc này nhưng phải khai `dataloaden_map.go`
+# riêng cho từng field, và resolver thành `dataloaden.Load(ctx, key)` với
+# key là struct sinh ra. Ở đây dùng `vikstrous/dataloadgen` trực tiếp theo
+# https://gqlgen.com/reference/dataloaders/ : 1 loader = 1 hàm `fetch` viết
+# tay, đọc được, và test đo được số SQL. Xem `dataloader.go` + `ddl.go`.

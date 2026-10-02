@@ -1,0 +1,12 @@
+# Deepwork progress state (session-local, keep git-local)
+.slim/deepwork/
+
+# Go
+api/langapp.db
+api/langapp.db-shm
+api/langapp.db-wal
+
+# Node
+web/node_modules/
+web/dist/
+web/.vite/

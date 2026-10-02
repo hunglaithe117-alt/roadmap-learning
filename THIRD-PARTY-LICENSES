@@ -1,0 +1,66 @@
+# THIRD-PARTY-LICENSES — lang-learn-app (Phase 7: real audio)
+
+Image `lang-learn-app` bundle 2 thành phần license đặc biệt dưới dạng
+"mere aggregation" (chạy side-by-side, không link/derive vào binary Go):
+binary Go + frontend của project giữ license gốc của repo.
+
+## 1. Piper TTS engine — GNU GPL v3.0
+
+- Gói: `piper_tts` 1.6.1 (wheel manylinux x86_64), chạy qua `os/exec`
+  (`PIPER_BIN`), không link vào code Go.
+- Nguồn: https://github.com/OHF-Voice/piper1-gpl
+- License: GNU General Public License v3.0
+  (https://github.com/OHF-Voice/piper1-gpl/blob/main/LICENSE.md).
+- Offer source (GPL §6d): engine được dùng nguyên dạng wheel public;
+  source tương ứng có tại URL trên (tag v1.6.1). Mọi chỉnh sửa engine
+  (nếu có trong tương lai) sẽ được công bố cùng image.
+
+## 2. Piper voices — rhasspy/piper-voices (ghi công dataset)
+
+- File trong image:
+  - `/models/zh/zh_CN-huayan-medium.onnx` (+ `.onnx.json`) — dataset `huayan`
+  - `/models/en/en_US-lessac-medium.onnx` (+ `.onnx.json`) — dataset `lessac`
+- Nguồn: https://github.com/rhasspy/piper-voices (kèm file `.onnx.json`
+  gốc của từng voice trong image tại cùng thư mục).
+- Ghi công: voice `zh_CN-huayan-medium` (giọng huayan) và
+  `en_US-lessac-medium` (giọng lessac) thuộc project piper-voices của
+  Rhasspy contributors; chi tiết nguồn dataset xem repo trên.
+- Mỗi voice ~63MB (`.onnx`), file `.onnx.json` giữ nguyên cạnh voice.
+
+## 3. Whisper STT model `small` (sidecar `stt`, không nằm trong image app)
+
+- Image: `onerahmet/openai-whisper-asr-webservice` (faster-whisper), pin digest
+  `sha256:0616c3d5fc6924e9d59aa8a7a3a944fbe8f3a5d701e5fc1fa2ce5b933dfecb73`
+  (tag `latest`, multi-arch index, last pushed 2026-08-09).
+- Nguồn sidecar: https://github.com/onerahmet/openai-whisper-asr-webservice
+- Weights model `small`: chuyển từ OpenAI Whisper (license MIT —
+  https://github.com/openai/whisper/blob/main/LICENSE).
+- faster-whisper / CTranslate2: MIT.
+- Model (~466MB) tải lúc runtime vào volume `stt-cache`, không distribute
+  trong image app.
+
+## 4. Thư viện trong image sidecar STT (E1 ghi nhận — chạy trong container `stt`, không link vào binary Go)
+
+- `torch` (PyTorch) — BSD-3-Clause (https://github.com/pytorch/pytorch/blob/main/LICENSE).
+- `pyannote.audio` (VAD/diarization pipeline của sidecar) — MIT
+  (https://github.com/pyannote/pyannote-audio).
+- Cả hai là dependency runtime của image sidecar
+  `onerahmet/openai-whisper-asr-webservice` (xem repo link ở mục 3);
+  project này chỉ gọi sidecar qua HTTP POST /asr, không bundle/tái phân phối
+  các thư viện trên trong image app.
+
+## 5. Dữ liệu từ vựng HSK 2.0 L2-L4 (Phase 8, seed trong binary Go)
+
+- Danh sách từ + pinyin số: `drkameleon/complete-hsk-vocabulary`
+  (https://github.com/drkameleon/complete-hsk-vocabulary) — MIT,
+  Copyright (c) 2026 Yanis Zafirópulos. Chỉ dùng wordlists/exclusive/old
+  (L2=147, L3=298, L4=598 từ unique); file sinh `api/hsk_seed_l234.go`
+  giữ attribution này trong comment đầu file.
+- Đối chiếu pinyin + chọn nghĩa gốc Anh theo HSK: `clem109/hsk-vocabulary`
+  (https://github.com/clem109/hsk-vocabulary) — MIT,
+  Copyright (c) 2018 Clement Venard.
+- Pinyin gốc Anh tham khảo CC-CEDICT (https://cc-cedict.org, CC BY-SA 4.0)
+  qua MDBG/drkameleon (đối chiếu, không copy định nghĩa); nghĩa tiếng Việt
+  trong seed do nhóm tự soạn cho app học.
+- Nghĩa Việt + IPA/gloss các deck PVO/TMRND (gốc T3.2 + mở rộng T8.2)
+  toàn bộ tự biên, không sao chép tài liệu có bản quyền.

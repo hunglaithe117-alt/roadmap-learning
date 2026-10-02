@@ -1,0 +1,81 @@
+# GraphQL schema — 7 bounded context, schema-first.
+#
+# Vì sao schema này phủ gần như TOÀN BỘ use case JSON của 7 context (STACK-V2
+# §3): app v1 có ~30 endpoint `net/http` trả JSON, Vue sẽ cần gọi lại từng
+# màn. Port sang GraphQL cho phép 1 request cây roadmap thay 4 request tuần tự
+# và client chỉ lấy field cần. `audio` KHÔNG có ở đây: streaming binary không
+# thuộc GraphQL (xem `internal/transport/http` cho 5 endpoint nhị phân).
+#
+# Quy ước bắt buộc đã chốt ở M4:
+#   - Mọi type có trường `guid` để client định danh row bất kể payload có đổi
+#     hình dạng (cùng hợp đồng `guid` của sync LWW — `application/sync.Decide`
+#     nhận diện peer bằng guid, nên client cũng phải có đường đi cùng khoá).
+#   - Cây roadmap trả CẢ layout (x/y) + `level` lấy từ application service
+#     (`GetPath`), không tính lại ở resolver — resolver chỉ đọc.
+#   - Mutation trả `ok` + payload, lỗi trả `error { message code }` với
+#     message tiếng Việt NGUYÊN VĂN từ `*application/errors.Error` (đã có
+#     400/404/409/501). Tầng transport KHÔNG dịch lại.
+#   - `Float` / `Int` / `String` chuẩn; mọi mốc thời gian là `String` RFC3339
+#     vì cột trong schema là TEXT (giữ nguyên từ SQLite v4) — đổi sang `DateTime`
+#     scalar sẽ đòi đổi cả contract DB.
+
+"""Lỗi nghiệp vụ trả về cho client. Message tiếng Việt lấy nguyên văn từ tầng application."""
+type UserError {
+  """Thông điệp tiếng Việt, nguyên văn từ application layer."""
+  message: String!
+  """Mã lỗi, map 1-1 sang HTTP status của application (BAD_REQUEST/NOT_FOUND/CONFLICT/NOT_IMPLEMENTED/…)."""
+  code: ErrorCode!
+}
+
+enum ErrorCode {
+  BAD_REQUEST
+  NOT_FOUND
+  CONFLICT
+  """Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ `mutation.sync` khi chưa cấu hình nguồn snapshot peer, `/api/backup` trước khi có `pg_dump`. Thêm hằng thứ 5 mà quên `codeForStatus` sẽ rơi về INTERNAL và che message tiếng Việt."""
+  NOT_IMPLEMENTED
+  INTERNAL
+}
+
+"""Bốn trạng thái node roadmap — hợp đồng đóng băng, có CHECK ở DB làm backstop."""
+enum Status {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+  SKIPPED
+}
+
+"""Trạng thái node suy ra cho bản đồ game: KHÔNG lưu DB, tính từ chuỗi node trước đó trong cùng stage."""
+enum LevelState {
+  DONE
+  CURRENT
+  LOCKED
+}
+
+"""9 loại tài liệu — trùng whitelist `application/roadmap.AllKinds`."""
+enum ResourceKind {
+  VIDEO
+  ARTICLE
+  TOOL
+  APP
+  BOOK
+  COURSE
+  SITE
+  PODCAST
+  CHANNEL
+}
+
+"""6 loại địa hình của bản đồ — trùng `domain/roadmap.AllTerrains` và CHECK ở migration 00004. Tên ở đây là TÊN HẰNG của domain, đổi sang SCREAMING_SNAKE cho đúng quy ước GraphQL; đổi 1 tên trong 3 nơi này là enum lệch DB (kiểu lỗi `enum Terrain` từng trả `PLAIN` cho 5/6 địa hình)."""
+enum Terrain {
+  MEADOW
+  DESERT
+  SNOW
+  VOLCANO
+  OCEAN
+  CITY
+}
+
+"""Hướng đi của bản đồ: cuộn dọc hay ngang."""
+enum Direction {
+  UP
+  RIGHT
+}

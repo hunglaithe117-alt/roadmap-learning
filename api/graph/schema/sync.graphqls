@@ -1,0 +1,49 @@
+# Context `sync` — merge peer-to-peer, log xung đột, trạng thái.
+
+"""Số lượng row đã ghi theo bảng. `decks`/`cards` chỉ kể row thật sự ghi — insert bị Postgres bỏ vì UNIQUE được tính vào `conflicts`, KHÔNG vào đây (xem `application/sync` `addSkipped`)."""
+type Merged {
+  decks: Int!
+  cards: Int!
+  reviews: Int!
+  notes: Int!
+  roadmapPaths: Int!
+  roadmapStages: Int!
+  roadmapMilestones: Int!
+  roadmapTopics: Int!
+  roadmapResources: Int!
+  roadmapBookmarks: Int!
+}
+
+"""1 dòng log xung đột. Merge đã TỰ chọn người thắng — UI chỉ XEM, không có nút resolve tay vì sửa tay sẽ phá hội tụ 2 máy."""
+type Conflict {
+  guid: String!
+  table: String!
+  field: String!
+  local: String!
+  incoming: String!
+  winner: String!
+  detail: String!
+  resolvedAt: String!
+}
+
+type SyncStatus {
+  """Luôn true: merge luôn sẵn sàng, không có cờ tắt/mở (đã bỏ ở v1)."""
+  enabled: Boolean!
+  strategy: String!
+  """Rỗng khi chưa sync lần nào."""
+  lastSyncAt: String!
+  conflictCount: Int!
+}
+
+type MergeResult {
+  ok: Boolean!
+  merged: Merged!
+  conflicts: [Conflict!]!
+  """Cảnh báo KHÔNG chặn merge (clock skew). Chỉ cảnh báo, không tự sửa giờ — sửa giờ máy là việc của user."""
+  warnings: [String!]!
+  lastSyncAt: String!
+  error: UserError
+}
+
+type SyncStatusPayload { ok: Boolean!, status: SyncStatus, error: UserError }
+type SyncConflictsPayload { ok: Boolean!, conflicts: [Conflict!]!, error: UserError }

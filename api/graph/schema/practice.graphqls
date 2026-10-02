@@ -1,0 +1,79 @@
+# Context `practice` — shadowing, chấm giọng nói, sổ lỗi.
+
+"""Tiến độ shadowing hiện tại của 1 thẻ. Chưa luyện lần nào trả vòng 0 / rate 1.0 / mốc rỗng — KHÔNG phải 404 (UI luôn cần 1 giá trị để hiển thị)."""
+type ShadowProgress {
+  cardId: ID!
+  """Số vòng TÍCH LUỸ do CLIENT đếm; server không tự +1 để 1 request retry không nhảy 2 vòng."""
+  loops: Int!
+  """Tỉ lệ tốc độ nói, đã qua `domain/practice.NormalizeRate` (0 → 1.0; ngoài [0.5, 1.5] là 400)."""
+  rate: Float!
+  updatedAt: String!
+}
+
+enum WordStatus {
+  OK
+  WRONG
+  MISSING
+  EXTRA
+}
+
+"""1 từ sau khi so transcript với câu mẫu. Cặp thiếu+thừa liền kề được gộp thành `WRONG` với text dạng "the→a" (đọc dễ hơn 2 mảnh rời)."""
+type DiffToken {
+  text: String!
+  status: WordStatus!
+}
+
+"""Kết quả chấm 1 lần ghi âm."""
+type DiffResult {
+  """Bản ĐÃ chuẩn hoá phồn→giản, đúng bằng thứ đã so. Không chuẩn hoá thì Whisper trả 學習 còn deck mẫu dùng 学习 → chấm sai oan dù đọc đúng."""
+  transcript: String!
+  diff: [DiffToken!]!
+  wrong: [String!]!
+  score: Float!
+}
+
+type ErrorEntry {
+  id: ID!
+  """null = lỗi luyện tự do, không gắn thẻ."""
+  cardId: ID
+  expected: String!
+  transcript: String!
+  wrong: [String!]!
+  createdAt: String!
+}
+
+"""Số lần sai của 1 thẻ + mặt trước/sau để client hiện gợi ý ôn lại mà không phải gọi thêm 1 query."""
+type CardErrorCount {
+  cardId: ID!
+  front: String!
+  back: String!
+  errors: Int!
+}
+
+type TopErrorCount {
+  word: String!
+  count: Int!
+}
+
+input ShadowProgressInput {
+  cardId: ID!
+  loops: Int!
+  rate: Float!
+}
+
+input AppendErrorInput {
+  cardId: ID
+  expected: String!
+  transcript: String!
+  wrong: [String!]!
+}
+
+input DiffInput {
+  sample: String!
+  transcript: String!
+}
+
+type ShadowProgressPayload { ok: Boolean!, progress: ShadowProgress, error: UserError }
+type AppendErrorPayload { ok: Boolean!, entry: ErrorEntry, error: UserError }
+type MarkErrorResolvedPayload { ok: Boolean!, """ID của note đánh dấu mới (sổ lỗi append-only, không xoá note gốc).""" noteId: ID!, error: UserError }
+type DiffPayload { ok: Boolean!, result: DiffResult, error: UserError }

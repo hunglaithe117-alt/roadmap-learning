@@ -1,0 +1,140 @@
+# STACK-V2 M7c — app v2 (Gin + GraphQL + Postgres) + Postgres + sidecar STT.
+#
+# App v1 (net/http + modernc.org/sqlite) đã bị gỡ ở M7c: mã nguồn ở `api/*.go`
+# cấp gốc đã xoá, binary `/app/langapp` không còn được build, service `app` ở
+# đây đã xoá. `docker compose --profile v2 up` giờ chỉ còn app v2.
+#
+# Profile `v2` vẫn còn (chưa gỡ) để không đổi lệnh của người đang dùng; nó giờ
+# là profile DUY NHẤT chứa app. Sẽ gỡ ở milestone sau cùng với việc đổi tên
+# service `app-v2` → `app`.
+#
+# `stt` (Whisper) và `audio` vẫn giữ: `audio-service` của v2 đọc `WHISPER_URL`.
+name: lang-learn-app
+
+services:
+  # STACK-V2 M4 — app v2: Gin + GraphQL + Postgres, entrypoint `cmd/langapp`.
+  #
+  # `AUDIO_GRPC_ADDR` trỏ `audio-service` (profile "audio", xem dưới). Để rỗng =
+  # app tự dùng stub sine — app vẫn chạy, chỉ audio là giả (header `X-Engine`
+  # nói "stub" và `/api/health` báo `degraded`).
+  app-v2:
+    build: .
+    image: lang-learn-app:latest
+    entrypoint: ["/app/langapp-server"]
+    profiles: ["v2"]
+    ports:
+      - "${V2_PORT:-8081}:8080"
+    environment:
+      PORT: 8080
+      WEB_DIST: /app/dist
+      LANGAPP_POSTGRES_DSN: postgres://langapp:${POSTGRES_PASSWORD:-langapp}@postgres:5432/langapp?sslmode=disable
+      # `GIN_MODE=release` tắt introspection + playground — biên tin cậy duy nhất
+      # của app (app không có auth).
+      GIN_MODE: release
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      AUDIO_GRPC_ADDR: audio-service:9090
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      # Chấp nhận `ok` LẪN `degraded` — xem giải thích ở HEALTHCHECK trong
+      # Dockerfile. `degraded` = đang chạy với engine audio stub, vẫn phục vụ
+      # được; Postgres chết thì `/api/health` trả 503 và healthcheck vẫn đỏ.
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; b=urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=5).read(); sys.exit(0 if (b'\"status\":\"ok\"' in b or b'\"status\":\"degraded\"' in b) else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # STACK-V2 M4 — tiến trình audio riêng (Piper exec + forward Whisper), nói
+  # chuyện với app qua gRPC `audio/v1`. Đây là ranh giới service THẬT: trước M4
+  # app tự `os/exec` Piper và POST multipart tới Whisper.
+  #
+  # Profile "audio": KHÔNG bật mặc định vì image kéo Piper wheel. Bật cùng app v2:
+  #   docker compose --profile v2 --profile audio up -d
+  #
+  # KHÔNG khai `depends_on` với `app-v2`: app v2 chỉ cần audio-service là TUỲ
+  # CHỌN (thiếu thì rơi về stub và vẫn phục vụ được), nên bắt app chờ audio là
+  # tạo phụ thuộc sai — audio chậm lên sẽ chặn app boot.
+  # DÙNG CHUNG image với `app-v2`, chỉ đổi `entrypoint`. Lý do: image đó đã có
+  # sẵn Piper + 2 voice 752MB ở `/models` (baked từ stage `voices`). Dựng image
+  # riêng sẽ tải 2 lần 752MB cho cùng 2 file, hoặc phải mount volume `models` —
+  # mà volume đó RỖNG lúc đầu nên Piper không thấy voice và rơi về stub im lặng.
+  # 1 image + 2 entrypoint là cấu hình ít giả định nhất.
+  audio-service:
+    build: .
+    image: lang-learn-app:latest
+    entrypoint: ["/app/audio-service"]
+    profiles: ["audio"]
+    environment:
+      AUDIO_GRPC_ADDR: :9090
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Rỗng = STT stub (không cần sidecar `stt`, không pull image 8GB). Bật STT
+      # thật: WHISPER_URL=http://stt:9000/asr docker compose --profile v2 --profile audio --profile stt up
+      WHISPER_URL: ${WHISPER_URL:-}
+    restart: unless-stopped
+
+  # T7.2 — faster-whisper sidecar (image onerahmet/openai-whisper-asr-webservice).
+  # Endpoint: POST /asr (field "audio_file", query language/vad_filter/beam_size).
+  # Profile "stt": KHÔNG chạy mặc định; bật sidecar khi cần STT thật:
+  #   WHISPER_URL=http://stt:9000/asr docker compose --profile v2 --profile audio --profile stt up
+  # Profile này vẫn CÒN sau M7c: `audio-service` của v2 đọc `WHISPER_URL` để
+  # chuyển từ stub transcript sang Whisper thật.
+  # Image ~8GB (model + torch/CUDA); dev nội dung không cần pull.
+  stt:
+    image: onerahmet/openai-whisper-asr-webservice:latest@sha256:0616c3d5fc6924e9d59aa8a7a3a944fbe8f3a5d701e5fc1fa2ce5b933dfecb73
+    profiles: ["stt"]
+    environment:
+      ASR_MODEL: small  # small CPU int8 ~466MB disk / ~1.5GB RAM; máy yếu xuống base
+    volumes:
+      - stt-cache:/root/.cache  # persist model đã tải giữa các lần restart
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  # STACK-V2 M1 — Postgres thay SQLite. Image `postgres:18` là bản stable
+  # mới nhất tại thời điểm viết (Postgres 18 phát hành 09/2025).
+  #
+  # Publish ra host để `go test` trên máy dev kết nối được (biến
+  # LANGAPP_TEST_POSTGRES_DSN, xem DEPLOY.md). Cổng HOST mặc định 5433 (đổi
+  # 2026-09-29 vì máy dev đã có Postgres ở 5432); cổng TRONG MẠNG COMPOSE vẫn
+  # luôn là 5432 — mọi DSN nội bộ dùng `@postgres:5432`, không đổi.
+  # Ghi đè cổng host bằng `POSTGRES_PORT=…`. Muốn đóng lại thì bỏ khối
+  # `ports` và đổi host trong DSN test.
+  #
+  # Healthcheck pg_isready là điều kiện `depends_on: service_healthy` của app
+  # — nếu không, app boot trước Postgres và migration fail race.
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: langapp
+      POSTGRES_USER: langapp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langapp}
+      # CJK sort + index GIN/tsvector cần collation C.UTF-8 (mặc định
+      # image là C.UTF-8 rồi, đặt tường minh để không đổi theo bản image).
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # Postgres 18 đổi layout PGDATA: image phủ định mount thẳng vào
+      # /var/lib/postgresql/data (docker-library/postgres#1259) — phải mount
+      # ở /var/lib/postgresql để `pg_upgrade --link` không vỡ khi nâng version.
+      - postgres-data:/var/lib/postgresql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langapp -d langapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  # `langapp-data` đã bị gỏ ở M7c cùng app v1: nó chỉ tồn tại để chứa file
+  # SQLite `/data/langapp.db`. Dữ liệu v2 nằm trong `postgres-data`.
+  #
+  # Còn SO HẠN BẠN CŨ trên máy: `docker volume rm lang-learn-app_langapp-data`
+  # (xem `make` / DEPLOY.md). Giữ lại vô nghĩa chỉ để không mất dữ liệu v1 ai
+  # đó còn cần — xoá tay khi nào chắc chắn không ai dùng nữa.
+  stt-cache:
+  postgres-data:

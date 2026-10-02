@@ -1,0 +1,73 @@
+# Context `srs` — deck / card / review SRS.
+
+type Deck {
+  id: ID!
+  guid: String!
+  name: String!
+  lang: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Card {
+  id: ID!
+  guid: String!
+  deckId: ID!
+  front: String!
+  back: String!
+  pinyin: String!
+  """Hết hạn ôn, RFC3339. Thẻ chưa từng ôn có state = NEW nên vẫn vào hàng đợi dù due_at ở tương lai."""
+  dueAt: String!
+  stability: Float!
+  difficulty: Float!
+  reps: Int!
+  lapses: Int!
+  """NEW | LEARNING | REVIEW — suy ra từ reps/lapses, KHÔNG chỉnh sửa tay được."""
+  state: String!
+  createdAt: String!
+  updatedAt: String!
+  """Thanh điệu đã chấm (nội dung "ni3" → "ní"), null = chưa chấm."""
+  tone: String
+  ipa: String
+  stress: String
+  audioURL: String
+}
+
+"""Kết quả chấm điểm 1 thẻ — trả cho client để hiện "lần sau ôn sau 3 ngày" mà không tự tính lại."""
+type ReviewResult {
+  cardId: ID!
+  dueAt: String!
+  intervalDays: Int!
+  stability: Float!
+  difficulty: Float!
+  reps: Int!
+  """true = lịch rơi về bảng fallback 1-3-7-14-30 vì reps < 3; false = đang dùng FSRS-lite."""
+  fallback: Boolean!
+}
+
+input CardInput {
+  front: String!
+  back: String!
+  pinyin: String!
+}
+
+"""PATCH phân biệt "không gửi field" với "gửi giá trị đó"."""
+input CardPatch {
+  front: String
+  back: String
+  pinyin: String
+}
+
+input ReviewInput {
+  cardId: ID!
+  """Thang 1-4 đóng băng ở v1 (1 = Again, 4 = Good). 0 và 5 là khoảng trống thật, không nhận."""
+  grade: Int!
+}
+
+type CreateDeckPayload { ok: Boolean!, deck: Deck, error: UserError }
+type DeleteDeckPayload { ok: Boolean!, error: UserError }
+type CreateCardPayload { ok: Boolean!, card: Card, error: UserError }
+type UpdateCardPayload { ok: Boolean!, card: Card, error: UserError }
+type DeleteCardPayload { ok: Boolean!, error: UserError }
+type RecordReviewPayload { ok: Boolean!, review: ReviewResult, error: UserError }
+type SetCardTonePayload { ok: Boolean!, card: Card, error: UserError }

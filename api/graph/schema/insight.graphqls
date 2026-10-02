@@ -1,0 +1,48 @@
+# Context `insight` — dashboard, streak, top lỗi, tiến độ theo khoảng.
+#
+# Read model: không sở hữu bảng nào, chỉ tổng hợp dữ liệu người khác đã ghi.
+# Mọi mốc thời gian chuẩn hoá UTC — `Timezone` luôn là "UTC" (hợp đồng đóng
+# băng ở v1); client VN hiển thị theo giờ địa phương nhưng KHÔNG gửi ngược ngày
+# đã convert lên server.
+
+"""Số liệu dashboard cho 1 cửa sổ. `done`/`total` là alias deprecated của `doneWindow`/`totalAll` — giữ vì UI v1 đang đọc tên cũ."""
+type Stats {
+  """week (7 ngày) | month (30 ngày). Rỗng = week."""
+  range: String!
+  days: Int!
+  """@deprecated dùng `doneWindow`."""
+  done: Int!
+  """@deprecated dùng `totalAll`."""
+  total: Int!
+  """Số review trong CỬA SỔ (đã ôn bao nhiêu)."""
+  doneWindow: Int!
+  """Tổng số thẻ hiện có, KHÔNG theo cửa sổ (kho học liệu)."""
+  totalAll: Int!
+  """Số thẻ đã tới hạn (due_at <= now). KHÔNG kéo thẻ `state='new'` — khác hàng đợi ôn `srs.DueCards`, và sự khác biệt đó là CỐ Ý (hành vi v1)."""
+  dueNow: Int!
+  accuracy: Float!
+  streak: Int!
+  """Luôn là "UTC"."""
+  timezone: String!
+}
+
+type TopError {
+  word: String!
+  count: Int!
+  """Thẻ sai nhiều nhất gần nhất — để UI bấm "nhảy review". NULL khi lần sai đó không gắn thẻ nào (luyện tự do), HOẶC khi cùng 1 từ sai ở nhiều thẻ khác nhau và không chọn thẻ nào làm đại diện."""
+  cardId: ID
+  """Mặt trước của thẻ để hiển thị. NULL đi cùng `cardId` null. Chỉ đọc được khi thẻ còn sống (không xoá mềm)."""
+  front: String
+}
+
+"""Tiến độ roadmap trong 1 khoảng — nuôi biểu đồ tuần/tháng (A1)."""
+type ProgressResult {
+  """Mốc bắt đầu YYYY-MM-DD, chuẩn hoá từ đầu vào."""
+  since: String!
+  """Số node `roadmap_topics` đang ở trạng thái xong tính từ `since`. KHÔNG phải "đã hoàn thành rồi bỏ sau" — cùng hệ nghĩa với `progress?since=`."""
+  completed: Int!
+}
+
+type StatsPayload { ok: Boolean!, stats: Stats, error: UserError }
+type ProgressResultPayload { ok: Boolean!, result: ProgressResult, error: UserError }
+type TopErrorsPayload { ok: Boolean!, errors: [TopError!]!, error: UserError }

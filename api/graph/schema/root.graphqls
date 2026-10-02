@@ -1,0 +1,150 @@
+# Root — gom 7 context vào 1 schema.
+#
+# Độ phủ: TOÀN BỘ use case JSON của 6 context có bảng. `audio` không có ở đây
+# (streaming binary + multipart upload không thuộc GraphQL — STACK-V2 §3), nó ở
+# `internal/transport/http`: `/api/tts`, `/api/stt`, `/api/backup`,
+# `/api/restore`, static SPA.
+
+type Query {
+  # ── srs ─────────────────────────────────────────────────────────────────
+  """Mọi deck còn sống (deleted = 0)."""
+  decks: [Deck!]!
+  deck(id: ID!): Deck
+  """Thẻ của 1 deck theo id tăng dần. null = deck không có."""
+  cards(deckId: ID!): [Card!]!
+  """Hàng đợi ôn: quá hạn (due_at <= now) HOẮC chưa từng ôn (state = 'new'). Không có cờ include_new vì thẻ mới có due_at +24h nên lọc chỉ theo due_at sẽ giấu chúng."""
+  dueCards(deckId: ID!): [Card!]!
+
+  # ── content ─────────────────────────────────────────────────────────────
+  """Tra từ điển Trung. `limit` null = 10 (khớp DEFAULT của hàm SQL `dict_search`).
+
+  Hạn chế CẦN GHI RÕ cho UI (STACK-V2 §4.2): `to_tsvector` với config `simple` coi cả chuỗi Hán là MỘT token, nên tra Hán đa ký tự đi qua đường `ILIKE` chứ không qua `@@`. Tra 1 ký tự Hán vẫn ra kết quả, nhưng KHÔNG phải do Postgres mạnh hơn FTS5."""
+  dictSearch(q: String!, limit: Int): [DictEntry!]!
+  """Tra từ điển Anh (headword/IPA/nghĩa)."""
+  englishSearch(q: String!, limit: Int): [EnglishEntry!]!
+  """Tra trọng âm 1 từ: ưu tiên từ điển, không có thì rơi về bộ quy tắc hậu tố (luôn gắn cờ exception)."""
+  stress(word: String!): StressLookup!
+  """Index nhẹ 1 level, hoặc chi tiết 1 chữ khi `hanzi` khác rỗng."""
+  strokes(level: String!, hanzi: String): StrokePayload!
+  """Tách câu thành từ nội dung + từ chức năng (quy tắc ở `domain/content.SplitChunks`)."""
+  chunk(sentence: String!): ChunkPayload!
+  """Chấm đáp án drill so với mẫu (bảng thang điệu ở `domain/content`)."""
+  gradeTone(expected: String!, answered: String!): GradeTonePayload!
+  """8 trục checklist THIEU kèm rubric tiếng Việt."""
+  thieuAxes: [ThieuAxis!]!
+  """Lịch sử chấm checklist, mới nhất trước."""
+  thieuSessions: [ThieuSession!]!
+  """Bài đọc graded, lọc theo level và id (rỗng = không lọc)."""
+  readerArticles(level: String, id: String): [ReaderArticle!]!
+
+  # ── roadmap ─────────────────────────────────────────────────────────────
+  """Mọi path còn sống kèm tiến độ rút gọn."""
+  paths: [PathSummary!]!
+  """CÂY ĐẦY ĐỦ 5 tầng của 1 path: path → stages → topics → resources, + milestones.
+
+  1 request này đủ để vẽ bản đồ: `topics` mang cả `level` (done/current/locked) và `point` (x/y) do application service tính, không phải client tự suy ra."""
+  path(slug: String!): Path
+  """Tiến độ 1 path. `since` = YYYY-MM-DD, đếm node hoàn thành trong [since, now)."""
+  pathProgress(slug: String!, since: String): PathProgressPayload!
+  stage(id: ID!): Stage
+  topic(id: ID!): Topic
+  resource(id: ID!): Resource
+  milestone(id: ID!): Milestone
+  bookmark(id: ID!): Bookmark
+  """Kho link độc lập, sắp theo thứ tự thêm. `status`/`tag` rỗng hoặc null = không lọc. `tag` khớp theo PHẦN TỬ của CSV, không phải chuỗi con — lọc "a" KHÔNG ra bookmark mang tag "ab"."""
+  bookmarks(status: BookmarkStatus, tag: String): [Bookmark!]!
+
+  # ── practice ────────────────────────────────────────────────────────────
+  shadowProgress(cardId: ID!): ShadowProgress!
+  """Sổ lỗi mới nhất trước, tùy chọn lọc theo thẻ. `limit` null = 50, tối đa 200."""
+  errors(cardId: ID, limit: Int): [ErrorEntry!]!
+  """Các từ sai nhiều nhất, tie-break theo chữ cái để thứ tự ổn định giữa 2 lần gọi."""
+  topErrors(limit: Int): [TopErrorCount!]!
+  """Gợi ý thẻ nên ôn lại: thẻ có nhiều lỗi nhất. Client gọi tiếp hàng đợi ôn SRS để chấm như bình thường."""
+  errorSuggestions(limit: Int): [CardErrorCount!]!
+  """So transcript với câu mẫu (LCS + chuẩn hoá phồn→giản trước khi so)."""
+  diff(sample: String!, transcript: String!): DiffPayload!
+
+  # ── insight ─────────────────────────────────────────────────────────────
+  """Dashboard cho cửa sổ `range` (week | month; rỗng = week)."""
+  stats(range: String): StatsPayload!
+  """Số ngày UTC LIÊN TIẾP có ít nhất 1 review. Hôm nay chưa học nhưng hôm qua có thì GIỮ NGUYÊN (không về 0 sớm trong ngày) — hành vi v1."""
+  streak: Int!
+  """Top lỗi quy về 1 bảng (khác `practice.topErrors`: đây đọc thẳng lịch sử `notes` với tie-break của `domain/insight`)."""
+  insightTopErrors(limit: Int): TopErrorsPayload!
+  """Node roadmap hoàn thành từ ngày `since` (YYYY-MM-DD)."""
+  progressOverRange(since: String!): ProgressResultPayload!
+
+  # ── sync ────────────────────────────────────────────────────────────────
+  syncStatus: SyncStatusPayload!
+  """Log xung đột, mới nhất trước. Chỉ XEM — không có nút resolve tay."""
+  syncConflicts(limit: Int): SyncConflictsPayload!
+}
+
+type Mutation {
+  # ── srs ─────────────────────────────────────────────────────────────────
+  createDeck(name: String!, lang: String): CreateDeckPayload!
+  deleteDeck(id: ID!): DeleteDeckPayload!
+  createCard(deckId: ID!, input: CardInput!): CreateCardPayload!
+  updateCard(id: ID!, patch: CardPatch!): UpdateCardPayload!
+  """Xoá mềm (tombstone để sync lan truyền)."""
+  deleteCard(id: ID!): DeleteCardPayload!
+  """Chấm điểm 1 thẻ: tính lịch bằng `domain/srs.ScheduleNext`, ghi UPDATE card + INSERT reviews trong CÙNG 1 transaction."""
+  recordReview(input: ReviewInput!): RecordReviewPayload!
+  """Ghi kết quả chấm thanh vào thẻ. Bước CHẤM thuộc context `content` (`content.gradeTone`), bước GHI thuộc `srs`."""
+  setCardTone(id: ID!, tone: String): SetCardTonePayload!
+
+  # ── content ─────────────────────────────────────────────────────────────
+  """Nạp seed từ vựng 1 level HSK vào 1 deck + bảng dict. Idempotent theo 2 khoá: deck theo tên, thẻ theo (deck, front), từ điển theo chữ Hán."""
+  importHSK(input: ImportHSKInput): ImportHSKPayload!
+  """Nạp en_dict tích hợp + 2 deck PVO/TMRND. Idempotent toàn bộ."""
+  seedEnglish: SeedEnglishPayload!
+  """Thêm/sửa 1 mục từ điển. Idempotent theo chữ Hán: chữ đã có thì KHÔNG ghi đè nội dung cũ."""
+  upsertDictEntry(input: DictEntryInput!): UpsertDictPayload!
+  """Chấm thanh điệu rồi ghi kết quả vào thẻ trong 1 lần gọi (2 use case của 2 context)."""
+  setTone(cardId: ID!, tone: String!): SetTonePayload!
+  appendThieu(input: ThieuInput!): AppendThieuPayload!
+
+  # ── roadmap ─────────────────────────────────────────────────────────────
+  createPath(input: PathInput!): CreatePathPayload!
+  updatePath(slug: String!, patch: PathPatch!): UpdatePathPayload!
+  """Xoá mềm path + toàn bộ nhánh con (cascade trong cùng transaction) để tombstone lan truyền."""
+  deletePath(slug: String!): DeletePathPayload!
+
+  createStage(pathSlug: String!, input: StageInput!): CreateStagePayload!
+  updateStage(id: ID!, patch: StagePatch!): UpdateStagePayload!
+  """Xoá mềm stage + milestone + topic + resource (cascade 1 transaction)."""
+  deleteStage(id: ID!): DeleteStagePayload!
+  """Đổi trạng thái stage: set/clear `completedAt` đúng luật `domain/roadmap.SetStatus`."""
+  setStageStatus(id: ID!, input: StatusInput!): SetStageStatusPayload!
+
+  createTopic(stageId: ID!, input: TopicInput!): CreateTopicPayload!
+  updateTopic(id: ID!, patch: TopicPatch!): UpdateTopicPayload!
+  deleteTopic(id: ID!): DeleteTopicPayload!
+  setTopicStatus(id: ID!, input: StatusInput!): SetTopicStatusPayload!
+
+  createResource(topicId: ID!, input: ResourceInput!): CreateResourcePayload!
+  updateResource(id: ID!, patch: ResourcePatch!): UpdateResourcePayload!
+  deleteResource(id: ID!): DeleteResourcePayload!
+
+  createMilestone(stageId: ID!, input: MilestoneInput!): CreateMilestonePayload!
+  updateMilestone(id: ID!, patch: MilestonePatch!): UpdateMilestonePayload!
+  deleteMilestone(id: ID!): DeleteMilestonePayload!
+
+  createBookmark(input: BookmarkInput!): CreateBookmarkPayload!
+  updateBookmark(id: ID!, patch: BookmarkPatch!): UpdateBookmarkPayload!
+  """Xoá mềm (tombstone để sync lan truyền)."""
+  deleteBookmark(id: ID!): DeleteBookmarkPayload!
+  """Đổi trạng thái kho link. Tách khỏi `updateBookmark` vì UI đổi trạng thái bằng 1 nút bấm và không muốn mất trạng thái khi patch title sai."""
+  setBookmarkStatus(id: ID!, status: BookmarkStatus!): SetBookmarkStatusPayload!
+
+  # ── practice ────────────────────────────────────────────────────────────
+  recordShadowProgress(input: ShadowProgressInput!): ShadowProgressPayload!
+  appendError(input: AppendErrorInput!): AppendErrorPayload!
+  """Đánh dấu 1 lỗi đã xử lý. Sổ lỗi append-only nên cách này ghi 1 note MỚI tham chiếu id lỗi — xoá cứng note gốc thì máy peer không bao giờ nhận được trạng thái này."""
+  markErrorResolved(errorId: ID!): MarkErrorResolvedPayload!
+
+  # ── sync ────────────────────────────────────────────────────────────────
+  """Nạp snapshot peer rồi merge trong 1 transaction duy nhất cho MỌI bảng."""
+  sync: MergeResult!
+}

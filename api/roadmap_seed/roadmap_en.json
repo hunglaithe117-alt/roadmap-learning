@@ -1,0 +1,1056 @@
+{
+  "language": "en",
+  "title": "Lộ trình tự học tiếng Anh: METHODS → NGONG → TAP → THIEU → Tích hợp",
+  "overview": "Roadmap 5 giai đoạn G0–G4 theo tên giai đoạn trung tính của bộ plan: G0 METHODS tự tạo, G1 NGONG nghe nói, G2 TAP từ vựng và chuyển ý, G3 THIEU viết học thuật, G4 Tích hợp và Presentation. Không dùng slogan triết lý cho NGONG, THIEU hay TAP vì chưa có evidence chéo. Người tự học không có lớp và giáo viên sửa, nên mọi thời lượng chỉ là khung tham khảo để duy trì đều đặn (30–45 phút/ngày), không phải yêu cầu của VuEnglish. Thứ tự gốc trong ảnh ở G2, G3 và thư viện G4 chưa khôi phục được — các trục chủ đề dưới đây chỉ ở mức trục tra cứu, không phải thứ tự buổi học. Tên kỹ thuật và Main Shows có nhãn [Nguồn]; routine hằng ngày và cách đo tiến bộ là [Suy luận]; link ngoài mang nhãn [Tham khảo thêm].",
+  "stages": [
+    {
+      "id": "en-g0",
+      "title": "G0 — METHODS tự tạo",
+      "goal": "Có sổ ghi chép, khung giờ cố định, thói quen nghe và đọc hàng ngày trước khi vào backbone.",
+      "duration_weeks": 2,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: chưa cần gì ngoài 30 phút mỗi ngày.",
+        "Điều kiện ra [Suy luận]: duy trì được 2 tuần liên tục có log.",
+        "Thời lượng gợi ý [Suy luận self-learn + giả định: nhịp 30 phút mỗi ngày]: 2 tuần.",
+        "Lời khuyên \"học xong TAP trước khi sang NGONG\" đi kèm lời nhắc \"Dục tốc bất đạt\" — đây là khuyên lộ trình, không phải nội dung bài học."
+      ],
+      "topics": [
+        {
+          "title": "Sổ ghi chép và log lỗi tự quản",
+          "why": "Người tự học không có giáo viên sửa bài, nên không có ai chấm thì không có dữ liệu lỗi. Self-correction log 3 cột giữ hằng ngày là cách duy nhất để thấy lỗi lặp lại.",
+          "activities": [
+            "Lập self-correction log 3 cột: phút:giây, lỗi, cách sửa; giữ hằng ngày.",
+            "Mỗi tuần nghe lại 3 bản ghi âm cũ, đếm lỗi lặp, chọn 1 lỗi lặp nhiều nhất để sửa tuần sau.",
+            "Ghi log theo lỗi thật (lỗi nuốt âm, lỗi trọng âm, lỗi ngắt nghỉ), không ghi chung chung.",
+            "Dùng app flashcard SRS cho từ mới, homonyms và minimal pairs."
+          ],
+          "resources": [
+            {
+              "title": "Anki",
+              "url": "https://apps.ankiweb.net",
+              "kind": "app",
+              "note": null
+            },
+            {
+              "title": "Anki background manual",
+              "url": "https://docs.ankiweb.net/background.html",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Cambridge blog spaced repetition",
+              "url": "https://www.cambridge.org/elt/blog/2019/08/12/learning-learn-flash-cards-spaced-repetition-example-sentences/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "PLOS ONE Murre và Dros 2015",
+              "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0120644",
+              "kind": "article",
+              "note": "Replicate đường cong quên Ebbinghaus, đọc ở mức tham khảo, mốc 1-3-7-14-30 chỉ là heuristic."
+            }
+          ]
+        },
+        {
+          "title": "Khung giờ 30 phút mỗi ngày và thói quen nghe đọc",
+          "why": "Mọi giai đoạn sau giả định có sẵn một khung giờ cố định. Thiếu khung giờ thì mọi hoạt động kỹ thuật phía sau sẽ không được duy trì.",
+          "activities": [
+            "[Suy luận] Chốt 1 khung 30 phút/ngày cố định và ghi log mỗi ngày có/không.",
+            "[Suy luận] Hằng ngày 30 phút: 10 phút shadowing, 10 phút chunking câu mới, 10 phút ghi âm và ghi self-correction log.",
+            "[Suy luận] Hằng tuần 1 buổi: nghe lại 3 bản ghi âm cũ, đếm lỗi lặp, chọn 1 lỗi để sửa tuần sau.",
+            "Duy trì đều đặn 2 tuần liên tụp trước khi vào G1."
+          ],
+          "resources": [
+            {
+              "title": "VOA Learning English Podcast",
+              "url": "https://learningenglish.voanews.com/z/1689",
+              "kind": "podcast",
+              "note": null
+            },
+            {
+              "title": "BBC Learning English",
+              "url": "https://www.bbc.co.uk/learningenglish",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Khung thời gian mẫu 12 tuần và 24 tuần",
+          "why": "Lịch mẫu là [Suy luận self-learn + giả định: người đi làm có 30 tới 45 phút mỗi ngày], không phải yêu cầu của VuEnglish — dùng làm khung tự dựng, không dùng làm cam kết.",
+          "activities": [
+            "[Suy luận] Mẫu 12 tuần: tuần 1 tới 6 theo cụm 1 và 2 của NGONG, tuần 7 tới 10 theo khung PVO của TAP, tuần 11 tới 12 viết 2 bài theo checklist THIEU và ghi 1 presentation thử.",
+            "[Suy luận] Mẫu 24 tuần: tuần 1 tới 12 như mẫu 12 tuần, tuần 13 tới 18 xong 4 trục đầu THIEU, tuần 19 tới 22 xong 4 trục sau, tuần 23 tới 24 làm presentation 5 phút và 1 bản viết đi kèm.",
+            "Điều chỉnh theo chuẩn ra thực tế chứ không kéo dài lịch cứng."
+          ],
+          "resources": []
+        }
+      ]
+    },
+    {
+      "id": "en-g1",
+      "title": "G1 — NGONG nghe nói",
+      "goal": "Phát âm rõ, nghe được chuỗi nói nhanh, nói theo cụm.",
+      "duration_weeks": 12,
+      "milestones": [
+        "Điều kiện vào [Nguồn: registration]: đã có METHODS tự tạo; TAP hay THIEU không bắt buộc.",
+        "Điều kiện ra [Suy luận]: tự ghi âm 2 phút ít lỗi nuốt âm cơ bản, nghe được ý chính của đoạn hội thoại quen thuộc.",
+        "Thời lượng gợi ý [Suy luận self-learn + giả định: tự học 30–45 phút/ngày]: ~12 tuần, điều chỉnh theo chuẩn ra.",
+        "Backbone có thứ tự duy nhất: học đúng từ cụm 1 tới cụm 4, tức S01–S24."
+      ],
+      "topics": [
+        {
+          "title": "Cụm 1 — Nền phát âm S01 tới S05",
+          "why": "S01 đặt nguyên tắc \"neutral accent with a clear diction: nói để ai cũng hiểu\" và \"Giảm processing load\" khi chọn show nghe; S02 luyện Schwa thay vì ép Stress cho người Việt; S04 nhấn \"một sai lầm cơ bản và phổ cập thường khiến tiếng Anh nói của học viên Việt nghe rất không tự nhiên\".",
+          "activities": [
+            "S01 Spoken vocab, Listening samples, Speaking principles — Main Show American Idol: nghe sample 2 phần theo thứ tự dễ trước khó sau, ghi lại 5 idioms nghe được thay vì dịch vocab trong giờ.",
+            "S02 Learning Theory P1, Schwa: đọc 1 tip nghe, nộp Idiom Summary + phần American Idol còn dở trước khi sang S03.",
+            "S03 Learning Theory P2, Intonation, Reading — Main Show Moment of Truth: luyện intonation theo cặp câu trần đi xuống và câu hỏi Yes/No đi lên, đọc ở 2 tốc độ chậm và thường.",
+            "S04 Strong vs Weak forms — Main Show Moment of Truth: luyện theo nhóm article, pronoun, preposition, auxiliary, mỗi nhóm 10 câu đọc to dạng yếu.",
+            "S05 Phrase reduction, Schwa social nuances — Main Show Moment of Truth: nghe kết Case1 rồi sang Case2, ghi lại 3 cụm reduction nghe được.",
+            "[Suy luận] Mỗi buổi tự học: 15 phút nghe Schwa, 15 phút đọc to theo Intonation, ghi âm 1 phút để so với hôm trước."
+          ],
+          "resources": [
+            {
+              "title": "NGONG syllabus (VuEnglish)",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-ngong-syllabus.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Main Show — American Idol (S01)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — Moment of Truth (S03, S04, S05)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "BBC Learning English",
+              "url": "https://www.bbc.co.uk/learningenglish",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "BBC Learning English YouTube",
+              "url": "https://www.youtube.com/@bbclearningenglish",
+              "kind": "channel",
+              "note": null
+            },
+            {
+              "title": "Rachel's English web",
+              "url": "https://www.rachelsenglish.com",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Cambridge Dictionary",
+              "url": "https://dictionary.cambridge.org",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "kênh JenniferESL trên YouTube",
+              "url": null,
+              "kind": "channel",
+              "note": "Không dùng URL handle @ cũ (truy cập báo không tồn tại lúc kiểm tra 2026-09-23), tìm tên kênh trực tiếp trên YouTube."
+            }
+          ]
+        },
+        {
+          "title": "Cụm 2 — Kỹ thuật nói S06 tới S12",
+          "why": "Cần biến kỹ thuật thành phản xạ chứ không phải kiến thức: tập chunking bằng cách ngắt câu dài thành cụm 3 tới 5 từ rồi nối lại, tập elision và liaison bằng shadowing tốc độ chậm rồi tăng dần. S12 ghi nửa đầu xong \"connected speech đủ xài\".",
+          "activities": [
+            "S06 Self-correction — Main Shows Moment of Truth, Biggest Loser: làm mini-test đọc đúng phiên âm 2 chiều (nhìn chữ phát âm, nghe đoán từ), lập log 50 từ hay sai Anh–Mỹ.",
+            "S07 Redundancy — Main Show Biggest Loser: tập nói thừa có chủ đích 30 giây cho 1 ý, thay vì nói cụt 1 câu rồi im.",
+            "S08 Spoken vocab WELL — Main Show Biggest Loser: học 11 nghĩa WELL qua clips, viết 1 status dùng 2 nghĩa vừa học.",
+            "S09 Reading & Listening — Main Show So You Think You Can Dance: xem intro show + xác định điện nhảy trước khi nghe nhận xét giám khảo.",
+            "S10 Staircase & Chunking — Main Shows SYTYCD, Biggest Loser: luyện chunk ngắn rồi gắn dần theo cầu thang từ đuôi câu lên đầu câu.",
+            "S11 Elision — Main Show Biggest Loser: tự luyện Staircase cụm ngắn trước khi vào buổi, nghe Part3 rồi mới học lý thuyết nuốt âm.",
+            "S12 Homonyms, Assimilation & Liaison — Main Show Biggest Loser: phần technical discussion đào sâu thêm không bắt buộc."
+          ],
+          "resources": [
+            {
+              "title": "NGONG syllabus (VuEnglish)",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-ngong-syllabus.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Main Show — Biggest Loser (S06–S12)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — So You Think You Can Dance (S09, S10)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "VOA Learning English",
+              "url": "https://learningenglish.voanews.com",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "VOA Learning English YouTube",
+              "url": "https://www.youtube.com/@voalearningenglish",
+              "kind": "channel",
+              "note": null
+            },
+            {
+              "title": "Speechling",
+              "url": "https://speechling.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "YouGlish",
+              "url": "https://youglish.com",
+              "kind": "tool",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Cụm 3 — Mở rộng và Presentation S13 tới S18",
+          "why": "Tự học không có team nên thay team bằng 1 bạn học hoặc tự đóng 2 vai; chốt 1 chủ đề presentation từ sớm để gom từ vựng thay vì chờ tới cuối khóa.",
+          "activities": [
+            "S13 Spoken vocab OH, Reading — Main Shows American Idol, Biggest Loser Finale: luyện OH theo cảm xúc khác nhau (tổng kết \"OH 6 nghĩa\"), nghe kỹ American Idol Case2.",
+            "S14 Interjections, Presentation registration — Main Show Biggest Loser Finale: học WHOA, ARGH, TA-DA, YIKES, PHEW, DUH; đăng ký nhóm là tùy chọn, thay bằng chốt 1 chủ đề presentation cá nhân.",
+            "S15 State name challenge — Main Shows Sharks, Miss USA: nghe Sharks Part1 kèm glossary, luyện phát âm tên bang Mỹ như 1 listening challenge.",
+            "S16 Contraction, Presentation team — Main Shows Sharks, Hidden Kingdoms: học contractions they'll, would've, couldn't've; họp nhóm là hoạt động lớp, tự học thay bằng xem đáp án State Name challenge.",
+            "S17 Conspiracy theories — Main Shows X-Factor US, Idol, Bachelor: xem trước 2 extra Amazing Race để nắm cấu trúc trước S18.",
+            "S18 Self-teaching individuals, Presentation show choice — Main Show Amazing Race: thực hành self-speaking theo sample clips, chốt tên show presentation trước hạn."
+          ],
+          "resources": [
+            {
+              "title": "NGONG syllabus (VuEnglish)",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-ngong-syllabus.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Main Show — Sharks (S15, S16)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — Miss USA (S15)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — X-Factor (S17)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — Amazing Race (S18)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — Hidden Kingdoms (S16)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "BBC Learning English YouTube",
+              "url": "https://www.youtube.com/@bbclearningenglish",
+              "kind": "channel",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Cụm 4 — Tự học và tổng kết S19 tới S24",
+          "why": "Sau khóa học không còn deadline nên phải có sẵn loop duy trì; thêm nữa Americas Next Top Model được ghi là \"một trong những show khó nghe nhất\" nên xếp cuối khóa.",
+          "activities": [
+            "S19 Additional sounds — Main Show Loch Ness Monster: nghe Part1 ở tốc độ giảm, tự kiểm handout phần match câu hỏi–đáp.",
+            "S20 Listening Challenge, Reading — Main Shows Loch Ness, Friends, Project Runway: thực hành self-speaking silent comedy, đọc trước Project Runway.",
+            "S21 Self-teaching tools — Main Show Project Runway: dùng bộ công cụ tối giản nghe–nói (giả lập môi trường tự luyện khi thiếu bản xứ), xem nốt Finale khi rảnh.",
+            "S22 Reading & Listening — Main Show America's Next Top Model: chơi warm-up speaking trước khi nghe.",
+            "S23 Self-teaching pair & group, Team performance, Final Review P1: thay team bằng thực hành theo pair lấy ý tưởng, làm Final Review 300 câu phần I.",
+            "S24 Result, Feedback & Award, Final Review P2: làm Final Review part1&2, giữ 2 bản nháp và 1 bản cuối để tự lưu tài liệu.",
+            "[Suy luận] Sau khóa: loop duy trì 3 buổi mỗi tuần với 1 buổi ôn âm, 1 buổi shadowing, 1 buổi ghi âm tự do."
+          ],
+          "resources": [
+            {
+              "title": "NGONG syllabus (VuEnglish)",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-ngong-syllabus.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Main Show — Friends (S20)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — Project Runway (S20, S21)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Main Show — America's Next Top Model (S22)",
+              "url": null,
+              "kind": "site",
+              "note": "Main Show gốc của NGONG, không có link công khai trong tài liệu nguồn — không tự tìm link thay thế."
+            },
+            {
+              "title": "Speechling",
+              "url": "https://speechling.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Luke's English Podcast",
+              "url": "https://teacherluke.co.uk",
+              "kind": "podcast",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Shadowing 6 bước, log 3 cột và show thay thế",
+          "why": "Shadowing là xương sống của G1: quy trình solo 6 bước cho phép tự chấm khi không có giáo viên. Danh sách show thay thế chỉ tương đương kỹ thuật, không phải Main Show gốc.",
+          "activities": [
+            "Quy trình shadowing solo 6 bước: chọn 30–60 giây audio có transcript; nghe mù nắm ý rồi đánh chunk; nhại đuổi 0,5–1 giây 3–5 vòng; ghi âm và ghi log 3 cột (phút:giây, lỗi, cách sửa); tách luyện 2–3 lỗi lớn nhất theo staircase; ghi âm lại so với chính mình hôm trước.",
+            "Nguyên tắc 3 vòng phụ đề khi luyện show thay thế: vòng 1 xem EN sub đánh chunk; vòng 2 shadowing 1–2 câu ở 0,75x; vòng 3 tắt sub nhại lại và ghi âm 30 giây.",
+            "Show thay thế tương đương: Modern Family (câu ngắn, chunking), The Office US (small talk, weak forms), Shark Tank US (cấu trúc lặp, thuyết trình), How I Met Your Mother (contraction, nối âm kể chuyện), MasterChef US (mệnh lệnh ngắn, staircase).",
+            "Nghe reduction, liaison, intonation trong video thật trước khi học lý thuyết."
+          ],
+          "resources": [
+            {
+              "title": "VOA Learning English Podcast",
+              "url": "https://learningenglish.voanews.com/z/1689",
+              "kind": "podcast",
+              "note": null
+            },
+            {
+              "title": "YouGlish",
+              "url": "https://youglish.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Rachel's English YouTube",
+              "url": "https://www.youtube.com/@RachelsEnglish",
+              "kind": "channel",
+              "note": null
+            },
+            {
+              "title": "Forvo",
+              "url": "https://forvo.com",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "Speechling",
+              "url": "https://speechling.com",
+              "kind": "tool",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-g2",
+      "title": "G2 — TAP từ vựng và chuyển ý",
+      "goal": "Có sổ PVO cá nhân, phân biệt được từ gần nghĩa, chuyển ý Việt-Anh tự nhiên.",
+      "duration_weeks": 10,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: đã qua cụm phát âm nền của NGONG để đọc to từ mới.",
+        "Điều kiện ra [Suy luận]: có 300 tới 500 mục PVO có ví dụ và qua 5 mốc ôn 1-3-7-14-30.",
+        "Thời lượng gợi ý [Suy luận self-learn + giả định: 45 phút mỗi ngày]: 8 tới 12 tuần.",
+        "Thứ tự gốc trong ảnh — chưa khôi phục được: các trục chủ đề dưới đây chỉ ở mức trục tra cứu, không phải thứ tự buổi học."
+      ],
+      "topics": [
+        {
+          "title": "Khung TMRND — chọn từ đúng ngữ cảnh",
+          "why": "Từ vựng được xét theo 5 chiều tone, mode, register, nuance, dialect (TMRND) là checklist để chọn từ đúng ngữ cảnh. Ví dụ: kid (informal, spoken) khác child (neutral) khác offspring (formal); brat mang tone tiêu cực pejorative, bắt buộc cảnh báo ngữ dụng, cấm dùng như synonym trung tính.",
+          "activities": [
+            "[Suy luận] Mỗi từ mới ghi đủ 5 ô TMRND; nếu ô nào chưa rõ thì để trống và ghi nguồn cần tra thêm thay vì đoán.",
+            "Phân biệt cụm gần nghĩa bằng mutually exclusive examples và spatial configurations: HOLD vs HUG vs EMBRACE, INTOXICATED vs INEBRIATED, HARD vs DIFFICULT.",
+            "Mở rộng cụm từ bằng synecdoche (all hands on deck), metonymy (The White House announced...) và metaphor (Time is money → spend/save/waste time).",
+            "Tra phiên âm Anh–Mỹ và nghe người bản xứ đọc từ rút gọn, homonyms (right/write/rite /raɪt/)."
+          ],
+          "resources": [
+            {
+              "title": "TAP I 2024 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2024/01/syllabus-lesson-plan-cua-tap-i.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Oxford Learner's Dictionaries",
+              "url": "https://www.oxfordlearnersdictionaries.com/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Cambridge Dictionary",
+              "url": "https://dictionary.cambridge.org",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "Forvo",
+              "url": "https://forvo.com",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "Thesaurus.com",
+              "url": "https://www.thesaurus.com/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Power Thesaurus",
+              "url": "https://www.powerthesaurus.org/",
+              "kind": "tool",
+              "note": "Synonym crowdsourced, cần kiểm lại ngữ cảnh."
+            },
+            {
+              "title": "Online Etymology Dictionary",
+              "url": "https://www.etymonline.com/",
+              "kind": "tool",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Sổ PVO và trí nhớ",
+          "why": "PVO là sổ từ vựng cá nhân làm top-down kết hợp External memory và đường cong quên Ebbinghaus. Trí nhớ làm việc chỉ giữ khoảng 7±2 đơn vị (cập nhật Cowan 4±1 ở mức gợi ý, cấm tuyệt đối hóa) nên phải có lịch ôn thay vì học dồn.",
+          "activities": [
+            "[Suy luận] Mỗi mục PVO gồm từ, phiên âm, 1 câu ví dụ tự đặt, 1 cụm TMRND đối chiếu, ngày ôn 1, 3, 7, 14, 30.",
+            "Ôn bằng cách che nghĩa và đọc to; từ chỉ vào dài hạn khi gặp–dùng–ôn giãn cách.",
+            "Mốc ôn 1-3-7-14-30 ngày là heuristic thực hành cho tự học, không phải định luật cứng; nhớ thì giãn ra, quên thì thu ngắn lại như Anki/Leitner/FSRS. Cấm vẽ đường cong Ebbinghaus như fact sinh học.",
+            "Demo nhập và tổ chức PVO theo cây: Ebbinghaus Forgetting Curve, Vocabulary Tree (CONCEPTS & Examples), quan hệ CONCEPT–CONCEPT và Example–CONCEPT; lưu dần suốt khóa."
+          ],
+          "resources": [
+            {
+              "title": "TAP I 2024 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2024/01/syllabus-lesson-plan-cua-tap-i.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Anki",
+              "url": "https://apps.ankiweb.net",
+              "kind": "app",
+              "note": null
+            },
+            {
+              "title": "PLOS ONE Murre và Dros 2015",
+              "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0120644",
+              "kind": "article",
+              "note": "Replicate đường cong quên Ebbinghaus, đọc ở mức tham khảo, mốc 1-3-7-14-30 chỉ là heuristic."
+            },
+            {
+              "title": "Cambridge blog spaced repetition",
+              "url": "https://www.cambridge.org/elt/blog/2019/08/12/learning-learn-flash-cards-spaced-repetition-example-sentences/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Collocation và corpus: kiểm từ trong ngữ cảnh thật",
+          "why": "Tự dựng sổ không có đáp án sẵn nên phải tra được bằng chứng collocation thay vì đoán. Claim \"10–30 lần gặp\" hay kinh nghiệm trực giác về sở hữu từ đều cần corpus để kiểm chứng.",
+          "activities": [
+            "Tra collocation chuyên sâu cho viết bằng OZDIC và Just The Word (từ kho BNC).",
+            "Kiểm ví dụ thực trong COCA (kho 1 tỉ từ) và SkELL (corpus cho người học) trước khi đưa từ vào sổ.",
+            "Chỉ tra từ trước khi đọc, chỉ tra từ chưa biết, chưa cần đọc hiểu hết.",
+            "Ví dụ PVO cần ghi cả lỗi từng mắc: accomplish + feat/task/mission, không dùng *accomplish homework.",
+            "Dùng SketchEngine student guide nếu cần hướng dẫn dùng corpus cho sinh viên."
+          ],
+          "resources": [
+            {
+              "title": "OZDIC",
+              "url": "https://ozdic.com/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Just The Word",
+              "url": "http://www.just-the-word.com/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "COCA",
+              "url": "https://www.english-corpora.org/coca/",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "SkELL",
+              "url": "https://skell.sketchengine.eu/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "SketchEngine student guide",
+              "url": "https://www.sketchengine.eu/user-guide/students/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Nguyên tắc chuyển ý Việt-Anh",
+          "why": "\"TRANSLATE the WRITE WAY\" và TẠP không phải là lớp DỊCH, không chú trọng TRUNG THÀNH với bản gốc; mục tiêu là chuyển sang ngôn ngữ đích tự nhiên (TMRND compatible) và dễ hiểu (culturally appropriate). Dịch sense-for-sense: hiểu chức năng rồi diễn đạt lại bằng cụm tự nhiên của L2.",
+          "activities": [
+            "[Suy luận] Routine 3 bước: tóm ý Việt trong 1 câu, chuyển sang Anh bằng cụm đã có trong PVO, đọc to kiểm tra có tự nhiên không.",
+            "Kiểm collocation trong corpus trước khi chốt bản dịch.",
+            "Ví dụ sửa: \"Cô ấy có kinh nghiệm dày dặn\" → She has extensive experience in..., không dịch thành *thick experience.",
+            "Cảnh báo ngữ dụng: không dùng từ có tone pejorative như synonym trung tính."
+          ],
+          "resources": [
+            {
+              "title": "TAP I 2024 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2024/01/syllabus-lesson-plan-cua-tap-i.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Ludwig",
+              "url": "https://ludwig.guru/",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "YouGlish",
+              "url": "https://youglish.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "COCA",
+              "url": "https://www.english-corpora.org/coca/",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            }
+          ]
+        },
+        {
+          "title": "Trục chủ đề nội dung: Language, Politics, Travel, Sociology, Humor, Time Travel, Skincare",
+          "why": "Nội dung học theo các mảng chủ đề này là danh sách chủ đề, không phải thứ tự buổi — bài chính và bài phụ dùng để gom từ vựng vào PVO, không học thuộc.",
+          "activities": [
+            "Trục LANGUAGE–POLITICS–TRAVEL: bài chính \"Can I put you on hold\", \"No internet helps NK craft new cult of Kim Jong-un\", \"Can you trust your travel guidebook\" và bài phụ về dementia, North Korea escape, Vietnam travel.",
+            "Trục PVO chuyên sâu: Ebbinghaus Forgetting Curve, Vocabulary Tree (CONCEPTS & Examples), quan hệ CONCEPT–CONCEPT và Example–CONCEPT.",
+            "Trục SOCIOLOGY: bài chính \"Men are Mars women are Venus\" và bài phụ về Status vs Support, Independence vs Intimacy, Advice vs Understanding. Bài \"Khởi Động Bảo Hiểm Thất Nghiệp\" bắt đầu ở S18 và hoàn thành ở S23 thuộc nhóm HUMOR (hiệu chính audit, không thuộc Sociology).",
+            "Trục HUMOR–TIME TRAVEL–SKINCARE (content-based): HUMOR gồm bài phụ \"The Locked Room\"; TIME TRAVEL gồm glossary sao/thiên hà, Doppler, Dark Energy/Matter, Big Bang, worm-hole, Grandfather paradox, black hole/event horizon, Warp Drive; SKINCARE gồm \"Intrinsic vs Extrinsic aging\" + routine Cleansing, Toning, Sun protection, Exfoliation, Anti-oxidation, Topical prebiotic/probiotic, Moisturizing, Acne treatment, Skin lightening, Tech-based treatment.",
+            "Gap đã ghi: 7 bài còn lại trong SKINCARE ghi \"không trích được từ raw\"."
+          ],
+          "resources": [
+            {
+              "title": "TAP I 2024 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2024/01/syllabus-lesson-plan-cua-tap-i.html",
+              "kind": "course",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-g3",
+      "title": "G3 — THIEU viết học thuật",
+      "goal": "Viết đoạn văn tuyến tính, liên kết rõ, lập luận có cấu trúc.",
+      "duration_weeks": 11,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: đã có vốn cụm từ từ Giai đoạn 2 để viết câu đỡ gượng.",
+        "Điều kiện ra [Suy luận]: có 6 tới 8 bài viết đã qua 2 vòng sửa và checklist tự review.",
+        "Thời lượng gợi ý [Suy luận self-learn + giả định: 3 buổi viết mỗi tuần]: 10 tới 12 tuần.",
+        "Thứ tự trình bày các trục A–H dưới đây là [Suy luận] sắp theo độ khó tăng dần cho người tự học, không phải thứ tự gốc trong ảnh (chưa khôi phục được)."
+      ],
+      "topics": [
+        {
+          "title": "Trục A — Linearity",
+          "why": "Khung Kaplan về viết tuyến tính; học trước tiên để đoạn văn đi thẳng một ý chính. Bắt buộc giữ phê bình Connor, Severino và Kaplan 1987 tự đính chính: đây là xu hướng tần suất, không phải bản chất dân tộc; cấm mọi diễn đạt essentialist kiểu gán người Việt viết vòng vo.",
+          "activities": [
+            "Học Kaplan diagrams, 11 đoạn handout xếp tuyến tính, branching, subgrouping.",
+            "Sửa câu vòng vo thành tuyến tính: \"Remote work improves retention. First,... Second,... Therefore...\".",
+            "Ba trích định hướng giữ nguyên văn: \"đập đi xây lại toàn bộ nền móng luyện viết\"; \"Học viết dựa trên linking và văn hóa linking\"; \"Vocabulary là yếu tố dễ quan sát nhưng lại nông nhất\"."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Kaplan 1966 PDF",
+              "url": "https://www.colby.edu/wp-content/uploads/2024/10/Kaplan_CR_1965.pdf",
+              "kind": "article",
+              "note": "Bản scan bài Cultural Thought Patterns, đọc kèm phê bình Connor, Severino và Kaplan 1987, cấm diễn đạt essentialist."
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục B — Thematic progression Halliday",
+          "why": "Mỗi clause có Theme (xuất phát) và Rheme (triển khai mới); dùng để nối câu chủ đề qua các câu sau. Giữ đúng thuật ngữ gốc RT/ERT/TT/ETT/N/U thay vì dịch.",
+          "activities": [
+            "Học Theme–Rheme, Marked vs Unmarked, Topical/Textual/Interpersonal.",
+            "Học 6 patterns RT, ERT, TT, ETT, N và U + 3 repetition types L, R và T; đối chiếu 3 patterns Daneš là constant, linear/zigzag, split/multiple.",
+            "Áp dụng: \"Vietnam invested in expressways. These investments cut costs.\""
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Academic Phrasebank Manchester",
+              "url": "https://www.phrasebank.manchester.ac.uk/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục C — Cohesive devices",
+          "why": "5 loại (Halliday & Hasan 1976): reference, substitution, ellipsis, conjunction, lexical cohesion; phân biệt cohesion bề mặt với coherence logic sâu. Học sau thematic để thay thế lặp từ.",
+          "activities": [
+            "Học Reference, Substitution và Ellipsis, Conjunction, Lexical cohesion + 10 conjunctive relations và khoảng 160 linking words.",
+            "Hiệu chính audit S13: Homework 2 điền linking words gồm 40 câu, tiếp tục giải ở S16.",
+            "S16 bổ sung measurement modifiers, yếu tố dialect, quan hệ lồng cấp PURPOSE thuộc CAUSE/EFFECT và EXCEPTION thuộc EXCLUSION.",
+            "Áp dụng: \"Solar costs fell. This decline enabled...\""
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Academic Phrasebank Manchester",
+              "url": "https://www.phrasebank.manchester.ac.uk/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "OZDIC",
+              "url": "https://ozdic.com/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục D — Dependency",
+          "why": "Xem câu là mạng head–dependent với động từ chính là trung tâm; dùng để cắt câu dài rườm rà.",
+          "activities": [
+            "Học 3 cơ chế Semantic, Grammatical, Positional và tương tác với Cohesive devices.",
+            "Vẽ dependency: \"Although funding was cut, the team published the results\" với head là published."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục E — Syntax Tree và Modality",
+          "why": "Syntax Tree để unpack câu khó và kiểm tra mỗi câu có S–V chính; Modality theo lực force-based dùng để kiểm tra mức độ chắc chắn — học theo chức năng hedge/recommend/obligate/predict.",
+          "activities": [
+            "Học clause types, Moods, Syntax Tree (NP, PP, VP, CP, TP), Head, Bottom-up/Top-down.",
+            "Hiệu chính audit S24: warm-up quảng cáo/rao vặt lỗi linking scope + sai lầm linking distance và giải đề GMAT.",
+            "Học modality force-based: WILL, WOULD, SHOULD, COULD, MAY, MUST với 3 thành tố force contributor, force receiver và force coordinator; phân loại epistemic (may/might), deontic (must/should), dynamic (can/could).",
+            "Áp dụng: \"The claim that funding drives innovation is overstated\" với chủ ngữ thật là claim; \"This suggests X may improve Y\" (hedge) khác \"X must improve Y\" (mệnh lệnh)."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Academic Phrasebank Manchester",
+              "url": "https://www.phrasebank.manchester.ac.uk/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục F — Argumentation",
+          "why": "Toulmin 6 phần Claim/Data/Warrant/Backing/Qualifier/Rebuttal; bài yếu thường thiếu Warrant nên người đọc hỏi \"thì sao?\". Appraisal/Engagement cho stance.",
+          "activities": [
+            "Học Toulmin mở rộng (Claim/Warrant/Rebuttal/Qualifier) và hàm ý: Claim \"Bus lanes cut commute time\" + Data \"Hanoi pilot: -18%\" + Warrant xe buýt tách khỏi ùn tắc.",
+            "Học Appraisal/Engagement (Martin, thích nghi đơn giản hóa; Monogloss vs Heterogloss: Entertain/Attribute/Disclaim/Proclaim) và attitude, graduation, engagement; hedges, boosters, self-mention.",
+            "Hiệu chính audit: S34 Engagement lead-in; S35 chữa Engagement + Toulmin; S36 Issue essays so sánh TOEFL/IELTS vs GRE/LSAT/GMAT + Idea Map + Peer Review/Review Partner.",
+            "Áp dụng: \"These results suggest the policy is partially effective, though Li (2020) argues...\"."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL Toulmin",
+              "url": "https://owl.purdue.edu/owl/general_writing/academic_writing/historical_perspectives_on_argumentation/toulmin_argument.html",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Academic Phrasebank Manchester",
+              "url": "https://www.phrasebank.manchester.ac.uk/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục G — Fallacy và Economy",
+          "why": "Dùng ở vòng sửa để gọt câu: economy là đạt ý tối đa với từ tối thiểu, 1 động từ mạnh thay cụm danh từ dài; fallacy nhận diện lỗi lập luận trước khi người đọc nêu.",
+          "activities": [
+            "Học 9 nguyên tắc economy và 5 fallacy phổ biến: strawman, ad hominem, false dilemma, slippery slope, hasty generalization.",
+            "Hiệu chính audit S37: Fallacy part 2 + ví dụ scandal từ thiện VN + Homework xác định fallacy và đề Argument essay GRE mẫu.",
+            "Hiệu chính audit S32: spoken qualifying structures, qualification trong văn luật, qualification khi nói vs khi viết, mở rộng/thu hẹp phạm vi, multi-element qualification.",
+            "Gọt câu: \"Due to the fact that...\" thành \"Because many...\"."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "UNC Writing Center",
+              "url": "https://writingcenter.unc.edu/tips-and-tools/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trục H — Scholarship track",
+          "why": "Để cuối cùng, viết 1 bộ hồ sơ mẫu. Bộ hồ sơ cần định dạng cụ thể: CV 1–2 trang đảo ngược thời gian; SOP 800–1.000 từ tránh mở đầu sáo rỗng; LOR chọn người giám sát trực tiếp kèm ví dụ cụ thể; interview chuẩn bị pitch 2 phút theo STAR.",
+          "activities": [
+            "Học self-assessment, Résumé vs CV, SOP vs PS, LOR, Professor Contact, Interview, ráp hồ sơ.",
+            "Hiệu chính audit S38: dữ liệu multimedia bổ sung + quy tắc bản dịch/công chứng tài liệu Việt + Grade Explanation.",
+            "Áp dụng mẫu hồ sơ vào trường cụ thể, không viết chung chung."
+          ],
+          "resources": [
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            },
+            {
+              "title": "EducationUSA",
+              "url": "https://educationusa.state.gov/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "British Council LearnEnglish",
+              "url": "https://learnenglish.britishcouncil.org/",
+              "kind": "site",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, thử lại bằng trình duyệt."
+            },
+            {
+              "title": "TeachingEnglish",
+              "url": "https://www.teachingenglish.org.uk/",
+              "kind": "site",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, thử lại bằng trình duyệt."
+            },
+            {
+              "title": "TESOL International",
+              "url": "https://www.tesol.org/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "IELTS official",
+              "url": "https://www.ielts.org/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Checklist tự review và loop viết – sửa – đọc lại",
+          "why": "Không có giáo viên chấm nên checklist tự review là hàng rào chất lượng duy nhất. Loop yêu cầu 2 vòng sửa và giữ 2 bản nháp + 1 bản cuối để so tiến bộ.",
+          "activities": [
+            "Checklist tự review: mỗi đoạn có 1 câu chủ đề và mọi câu còn lại hướng về nó; mỗi câu mới nhắc lại hoặc phát triển theme của câu trước; không lặp từ khóa quá 3 lần trong 1 đoạn nếu chưa dùng cohesive device; mỗi câu dài trên 25 từ đã thử tách đôi.",
+            "Checklist tự review (tiếp): mỗi modal như MUST hay SHOULD đã kiểm tra mức độ khẳng định có chủ ý; mỗi luận điểm có bằng chứng và 1 câu xét phản biện; bài đã cắt ít nhất 10 phần trăm số từ ở bản nháp đầu.",
+            "[Suy luận] Loop: viết nháp 200 tới 300 từ, để qua 1 ngày, tự sửa bằng checklist, rồi mới nhờ 1 người đọc.",
+            "Mỗi bài giữ 2 bản nháp và 1 bản cuối trong cùng thư mục để so tiến bộ."
+          ],
+          "resources": [
+            {
+              "title": "UNC Writing Center",
+              "url": "https://writingcenter.unc.edu/tips-and-tools/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "UEFAP",
+              "url": "http://www.uefap.com/",
+              "kind": "course",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en-g4",
+      "title": "G4 — Tích hợp và Presentation",
+      "goal": "Gom nghe, nói, từ vựng, viết vào một bài thuyết trình cá nhân.",
+      "duration_weeks": 4,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: đã xong Giai đoạn 1 và có ít nhất một nửa Giai đoạn 2 và 3.",
+        "Điều kiện ra [Suy luận]: có 1 video presentation 5 tới 7 phút và 1 bản viết đi kèm đã sửa.",
+        "Thời lượng gợi ý [Suy luận self-learn + giả định: tự học 30–45 phút/ngày]: ~4 tuần, điều chỉnh theo chuẩn ra.",
+        "Lịch mẫu 24 tuần xếp presentation vào tuần 23–24; đây là khung tự dựng, không phải yêu cầu của VuEnglish."
+      ],
+      "topics": [
+        {
+          "title": "Chốt chủ đề và gom từ vựng cho presentation",
+          "why": "Chủ đề phải chốt từ sớm (đã nêu ở NGONG S18) thì từ vựng mới gom được vào PVO và dùng lại được ở G2. Không chốt sớm thì presentation cuối khóa thành viết từ đầu.",
+          "activities": [
+            "Chốt 1 chủ đề presentation cá nhân và tên show nguồn làm tư liệu, trước hạn.",
+            "Gom từ vựng theo cụm PVO của G2, ghi 1 câu ví dụ tự đặt cho mỗi từ.",
+            "Dùng cụm học thuật theo chức năng từ phrasebank (giới thiệu, so sánh, phản biện) thay vì nói tự do.",
+            "Đối chiếu ý với dữ liệu bằng Cụm TMRND trước khi chốt tiến trình bài."
+          ],
+          "resources": [
+            {
+              "title": "Academic Phrasebank Manchester",
+              "url": "https://www.phrasebank.manchester.ac.uk/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "NGONG syllabus (VuEnglish)",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-ngong-syllabus.html",
+              "kind": "course",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Trình bày và ghi âm video 5 tới 7 phút",
+          "why": "Không có lớp và không có khán giả thật thì bản ghi âm là cách duy nhất bắt lỗi nuốt âm, ngắt nghỉ và trọng âm trước khi trình bày thật. Công cụ so sánh với bản mẫu là tự chấm khả dụng nhất.",
+          "activities": [
+            "Chuẩn bị nội dung theo cấu trúc: mở bài nêu vấn đề, thân bài theo cụm có linking words, kết luận có câu xét phản biện.",
+            "Ghi âm 1 lần thử, so với bản gốc/mẫu bằng công cụ có phản hồi âm thanh.",
+            "Ghi log lỗi 3 cột sau mỗi lần ghi, sửa lỗi lặp nhiều nhất trước lần ghi tiếp theo.",
+            "Luyện intonation và stress theo mẫu trước khi ghi bản cuối."
+          ],
+          "resources": [
+            {
+              "title": "Speechling",
+              "url": "https://speechling.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "BBC Learning English",
+              "url": "https://www.bbc.co.uk/learningenglish",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Rachel's English web",
+              "url": "https://www.rachelsenglish.com",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "YouGlish",
+              "url": "https://youglish.com",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Luke's English Podcast",
+              "url": "https://teacherluke.co.uk",
+              "kind": "podcast",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Bản viết đi kèm và đối chiếu với checklist",
+          "why": "Bản viết đi kèm là nơi áp checklist THIEU; không có nó thì video 5–7 phút thành nói tự do không có cấu trúc đo được.",
+          "activities": [
+            "Viết bản kịch bản/bản viết đi kèm rồi tự sửa bằng checklist THIEU trước khi thu video.",
+            "Giữ 2 bản nháp và 1 bản cuối trong cùng thư mục để so tiến bộ.",
+            "Đối chiếu bản viết với lỗi trong self-correction log để tránh lặp lại lỗi nói trong bài viết."
+          ],
+          "resources": [
+            {
+              "title": "Purdue OWL",
+              "url": "https://owl.purdue.edu/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "UNC Writing Center",
+              "url": "https://writingcenter.unc.edu/tips-and-tools/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "THIEU 2023 syllabus",
+              "url": "https://vuenglishclass.blogspot.com/2023/07/syllabus-lesson-plan-cua-thieu.html",
+              "kind": "course",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Thư viện knowledge-sharing 21 bài + 1 bài fitness",
+          "why": "Thư viện được liệt kê theo nhóm chủ đề để tra cứu, KHÔNG đánh số thứ tự học. Giữ nhịp học dài hạn cần một nhóm tra cứu sẵn thay vì tìm lại từ đầu.",
+          "activities": [
+            "Nhóm Động lực và phối hợp kỹ năng: sense of purpose, phối hợp các kỹ năng, lớp học như đại lý du lịch.",
+            "Nhóm Nghe nói và ngữ pháp: dạy nghe-nói, grammar hệ thống và đa trường phái, quy tắc so với rote.",
+            "Nhóm Từ vựng và dịch: SOP Việt-Anh, synonym và Cognitive, Synecdoche, TMRND, content-based vocab, translation.",
+            "Nhóm Định hướng nghề và kỳ thi: TESOL so với Linguistics, giáo viên hướng nội, IELTS.",
+            "Nhóm Thể chất: 1 bài fitness, đọc khi cần giữ nhịp học dài hạn.",
+            "Suy luận: mọi tóm 2–3 dòng mỗi bài suy từ tiêu đề đều là suy diễn, raw chỉ có tên bài + link — đọc toàn văn khi cần, không dùng tóm tắt thay nguồn."
+          ],
+          "resources": [
+            {
+              "title": "VuEnglish Knowledge-Sharing index",
+              "url": "https://vuenglishclass.blogspot.com/2026/06/vuenglish-knowledge-sharing-index.html",
+              "kind": "site",
+              "note": "Kho gồm 21 bài sư phạm và ngôn ngữ cộng 1 bài fitness; ngày trang index là June 15, 2026."
+            },
+            {
+              "title": "TESOL International",
+              "url": "https://www.tesol.org/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "IELTS official",
+              "url": "https://www.ielts.org/",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Loop duy trì dài hạn sau G4",
+          "why": "Khóa học kết thúc ở G4 nhưng mục tiêu là trò chuyện đa chủ đề và duy trì lâu dài; phải có sẵn nhịp review và chỉ số đo để không tụt sau vài tuần không học.",
+          "activities": [
+            "[Suy luận] Weekly review 30 phút: nghe lại 1 bản ghi âm, ôn 20 mục PVO tới hạn, đọc lại 1 bài viết cũ.",
+            "[Suy luận] Monthly review 90 phút: ghi 1 video nói 3 phút, viết 1 đoạn 200 từ, đối chiếu với tháng trước bằng checklist THIEU.",
+            "[Suy luận] Đo lường: đếm số ngày duy trì, số mục PVO qua đủ 5 vòng ôn, số bài viết đạt checklist, số lỗi lặp lại trong self-correction log.",
+            "[Suy luận] Khi gián đoạn: giảm tải 1 tuần rồi quay lại, không dồn nợ.",
+            "Sau NGONG: loop duy trì 3 buổi mỗi tuần gồm 1 buổi ôn âm, 1 buổi shadowing, 1 buổi ghi âm tự do."
+          ],
+          "resources": [
+            {
+              "title": "Anki",
+              "url": "https://apps.ankiweb.net",
+              "kind": "app",
+              "note": null
+            },
+            {
+              "title": "Cambridge blog spaced repetition",
+              "url": "https://www.cambridge.org/elt/blog/2019/08/12/learning-learn-flash-cards-spaced-repetition-example-sentences/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Quizlet",
+              "url": "https://quizlet.com/",
+              "kind": "app",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot nhưng mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "British Council LearnEnglish",
+              "url": "https://learnenglish.britishcouncil.org/",
+              "kind": "site",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, thử lại bằng trình duyệt."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

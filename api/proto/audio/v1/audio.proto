@@ -1,0 +1,82 @@
+// audio.proto — hợp đồng giữa app chính (internal/infrastructure/audio) và tiến
+// trình `services/audio-service` (Piper TTS + Whisper sidecar).
+//
+// Vì sao gRPC ở đây mà không phải interface trong 1 process: Piper là binary
+// ngoài (Python wheel 752MB) và Whisper là sidecar 8GB. Chúng đã là 2 tiến
+// trình riêng trong v1; M4 chỉ đổi cách app nói chuyện với chúng từ
+// `os/exec` + HTTP client sang 1 giao thức có version, có timeout, có
+// healthcheck và có ranh giới service thật (STACK-V2-PLAN §2).
+//
+// Sinh code: `go generate ./proto/...` (xem buf.gen.yaml). KHÔNG sửa tay file
+// `.pb.go` — chạy lại buf là bản tái lập được.
+syntax = "proto3";
+
+package audio.v1;
+
+option go_package = "langapp/proto/audio/v1;audiopb";
+
+// SynthesizeRequest yêu cầu đọc 1 đoạn văn bản.
+// `lang` là gợi ý chọn voice (zh/en) — server bỏ qua lang và dùng voice mặc
+// định khi không khớp, KHÔNG phải lỗi (giữ hành vi v1 của PiperTTSEngine).
+message SynthesizeRequest {
+  string text = 1;
+  string lang = 2;
+}
+
+// SynthesizeResponse trả WAV bytes trong `audio` (không base64) vì gRPC
+// chịu được binary thô; base64 ở đây là +33% payload vô nghĩa.
+message SynthesizeResponse {
+  bytes audio = 1;
+  string content_type = 2;
+  // Engine là tên engine thật sự xử lý ("piper" | "stub"), để app gắn header
+  // X-Engine mà không phải tự suy ra.
+  string engine = 3;
+  bool real = 4;
+}
+
+// TranscribeRequest mang audio thô + tên/kiểu để engine đoán định dạng
+// (wav vs m4a vs webm).
+message TranscribeRequest {
+  bytes audio = 1;
+  string filename = 2;
+  string content_type = 3;
+  // Lang là gợi ý ("zh"/"en"); rỗng = để engine tự nhận dạng.
+  string lang = 4;
+}
+
+// WordTimestamp là 1 từ kèm mốc thời gian. Mọi trường optional vì Whisper
+// sidecar có lúc trả, có lúc không (v1 cũng vậy).
+message WordTimestamp {
+  string word = 1;
+  optional double start = 2;
+  optional double end = 3;
+  optional double confidence = 4;
+}
+
+message TranscribeResponse {
+  string text = 1;
+  string lang = 2;
+  repeated WordTimestamp words = 3;
+  optional double confidence = 4;
+  string engine = 5;
+  bool real = 6;
+}
+
+// StreamSynthesizeRequest giống SynthesizeRequest — có riêng để client
+// chọn đường streaming (STACK-V2-PLAN §3: GraphQL không có streaming binary).
+message StreamSynthesizeRequest {
+  string text = 1;
+  string lang = 2;
+}
+
+// Chunk là 1 mảnh WAV. `last = true` ở mảnh cuối để client biết đã hết.
+message Chunk {
+  bytes data = 1;
+  bool last = 2;
+}
+
+service Audio {
+  rpc Synthesize(SynthesizeRequest) returns (SynthesizeResponse);
+  rpc Transcribe(TranscribeRequest) returns (TranscribeResponse);
+  rpc StreamSynthesize(StreamSynthesizeRequest) returns (stream Chunk);
+}

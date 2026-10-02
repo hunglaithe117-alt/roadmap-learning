@@ -1,0 +1,1310 @@
+{
+  "language": "zh",
+  "title": "Tự học tiếng Trung giản thể từ số 0 → HSK 4",
+  "overview": "Roadmap 5 giai đoạn G0–G4 cho người Việt bắt đầu từ số 0, tự học không giáo viên, học chữ giản thể; mục tiêu là giao tiếp thường nhật + nền tảng HSK 1–4. Mọi \"tuần\" quy đổi ở nhịp tự học 30–45 phút/ngày: giảm nhịp thì tăng tuần, không bỏ giai đoạn. Mọi thời lượng là ước lượng tự học, không phải lịch trình cố định và không phải yêu cầu của nguồn nào. Số liệu từ vựng/chữ Hán dùng bảng HSK 2.0 duy nhất (150/174, 300/347, 600/617, 1.200/1.064); số điểm ngữ pháp 54/79/87/115 là ước tính AllSet, chưa từng công bố chính thức. Trích chuyển nguyên văn theo quy ước [Nguồn]; phần routine và thời lượng gắn [Suy luận].",
+  "stages": [
+    {
+      "id": "zh-g0",
+      "title": "G0 — Pinyin & thanh điệu",
+      "goal": "Đọc đúng mọi âm tiết pinyin; phân biệt 4 thanh + thanh nhẹ; áp dụng được 3 quy tắc biến điệu (3+3, 不, 一). Ba quy tắc biến điệu này là dữ kiện, không phải tự dựng.",
+      "duration_weeks": 5,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: chưa cần gì ngoài 30–45 phút mỗi ngày; không cần biết trước chữ Hán.",
+        "Điều kiện ra [Suy luận]: tự kiểm bằng minimal pair/tone pair (mỗi lần chỉ 1 hàng/cột), không còn nhầm T1–T4 khi nghe và phát âm được zh/ch/sh phân biệt z/c/s.",
+        "Ước lượng thời lượng [Suy luận self-learn + giả định: 30–45 phút/ngày]: ~4–6 tuần, suy từ khuyến nghị của ChinesePod \"khoảng 50 bài Newbie trước khi lên Elementary\".",
+        "Vì sao G0 nặng với người Việt: 1 nghiên cứu n=42 ghi 40,6% lỗi thanh (trong tổng 384 lỗi) kèm lỗi cuốn lưỡi→không cuốn lưỡi; lỗi nhận thanh T1↔T4 nổi bật."
+      ],
+      "topics": [
+        {
+          "title": "Bảng pinyin và quy tắc viết thanh",
+          "why": "Pinyin là hệ La-tinh hóa để viết tiếng Trung; người mới học pinyin trước khi học chữ — \"All beginners should learn pinyin first.\" Không đọc được pinyin thì không tự kiểm được thanh, mà mọi giai đoạn sau đều phụ thuộc thanh.",
+          "activities": [
+            "Đọc bảng pinyin AllSet (giao cắt initial × final, audio từng âm 4 thanh); ghi nhớ âm tiết = initial (thanh mẫu 声母) + final (vần 韵母) + thanh, âm tiết không có initial ký hiệu ∅-.",
+            "Học quy tắc vị trí dấu thanh: ưu tiên a > o > e > i > u > ü; riêng \"ou\" đặt dấu trên o.",
+            "Ghi nhớ \"iu\"/\"ui\" đánh dấu trên nguyên âm thứ hai.",
+            "Áp dụng quy tắc ü: sau j/q/x bỏ dấu hai chấm (vẫn đọc /y/); đứng đơn lẻ viết \"yu\"; sau n/l giữ dấu (nü, lü).",
+            "Tự viết lại bảng âm tiết đầy đủ từ Wikipedia Pinyin table để đối chiếu, không chỉ nghe."
+          ],
+          "resources": [
+            {
+              "title": "Chinese Pronunciation Wiki — Pinyin chart (AllSet)",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Pinyin_chart",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Chinese Grammar Wiki — Beginner Guide",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Beginner_Guide_to_Chinese_Grammar",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Chinese Pronunciation Wiki — Initial",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Initial",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Wikipedia — Pinyin table",
+              "url": "https://en.wikipedia.org/wiki/Pinyin_table",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "MIT — Hanyu Pinyin spelling rules",
+              "url": "https://web.mit.edu/jinzhang/www/pinyin/spellingrules/index.html",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "PolyU BEPTH — Spelling Rules in Pinyin",
+              "url": "https://www.polyu.edu.hk/bepth/introduction-to-phonetics/spelling-rules-in-pinyin/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "pinyin.info — Where do the tone marks go?",
+              "url": "https://pinyin.info/rules/where.html",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "pinyin.info — 拼音正詞法基本規則 (GB/T 16159-2012 text)",
+              "url": "https://pinyin.info/rules/pinyinrules.html",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "4 thanh + thanh nhẹ",
+          "why": "Thanh là thay đổi ca độ để phân biệt từ: \"Mandarin has four tones: high, rising, low, and falling\"; thanh nhẹ không có ca độ riêng. Quan trọng nhất: T3 phải THẤP, không phải kiểu hạ–hồi khi đứng trong câu.",
+          "activities": [
+            "Học 5 mức: T1 cao và bằng; T2 lên; T3 thấp; T4 xuống, ngắn hơn 3 thanh kia; thanh nhẹ (轻声) ngắn nhẹ, ca độ phụ thuộc thanh trước.",
+            "Luyện half-third: thanh 3 trong câu chỉ đi xuống thấp, không lên lại, trừ khi đứng một mình hoặc cuối cụm.",
+            "Ghi nhớ từ không bắt đầu bằng thanh nhẹ; điển hình 吗/吧/呢/的.",
+            "Tự ghi âm từng âm tiết 4 thanh rồi so với audio AllSet bằng tai."
+          ],
+          "resources": [
+            {
+              "title": "Hacking Chinese — Guide to Mandarin tones",
+              "url": "https://www.hackingchinese.com/the-hacking-chinese-guide-to-mandarin-tones/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Chinese Pronunciation Wiki — Four tones",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Four_tones",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Chinese Pronunciation Wiki — Neutral tone",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Neutral_tone",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Biến điệu (tone sandhi) — 3 quy tắc bắt buộc",
+          "why": "Không ghi nhớ 3 quy tắc này thì nói bị under-apply: \"Vietnamese speakers tend to underapply Mandarin third tone sandhi\" và lỗi chính của 一 cũng là \"under application\". Đồng thời biến điệu KHÔNG được đánh dấu trong pinyin theo chuẩn quốc gia — phải biết tự áp dụng.",
+          "activities": [
+            "Quy tắc 1: T3 + T3 → đọc T3 đầu thành T2 (你好 vẫn viết nǐ hǎo, đọc ní hǎo).",
+            "Quy tắc 2: 不 trước T4 → bú (bù → bú).",
+            "Quy tắc 3: 一 trước T4 → yí; trước các thanh khác → yì.",
+            "Ghi nhớ chuẩn quốc gia 聲調一律標原調，不標變調 (đánh thanh gốc, không đánh biến điệu); riêng khi dạy phát âm (語音教學) được phép đánh theo biến điệu.",
+            "Drill riêng cặp 3-3 và cặp 一/不 cho tới khi nói đúng mọi lúc."
+          ],
+          "resources": [
+            {
+              "title": "Chinese Pronunciation Wiki — Tone change rules",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Tone_change_rules",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "pinyin.info — 拼音正詞法基本規則 (GB/T 16159-2012 text)",
+              "url": "https://pinyin.info/rules/pinyinrules.html",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "国家标准馆 — GB/T 16159-2012",
+              "url": "https://ndls.cnis.ac.cn/standard/detail/51c2f77c5e3c01c75a147ae41bff75a8",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Wikipedia — Tone sandhi",
+              "url": "https://en.wikipedia.org/wiki/Tone_sandhi",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Lỗi phát âm đặc thù người Việt",
+          "why": "Chuẩn chốt từ 3 nghiên cứu: T4 khó nhất cả nghe lẫn nói (ICPhS 2023: \"Tone 4 was the most difficult\"; Airiti: \"a major confusion between Tone 1 and Tone 4\"; ĐH Đà Nẵng: \"The main error pattern was the confusion between T1 and T4\"). Lỗi nổi bật nhất trong 384 lỗi là cuốn lưỡi→không cuốn lưỡi (zh/ch/sh → z/c/s).",
+          "activities": [
+            "Drill đối lập cuốn lưỡi sh–s, zh–z, ch–c bằng khẩu hình và gương.",
+            "Drill T1 ↔ T4 cả chiều nghe lẫn nói; đặc biệt chú ý T1 không đạt đủ cao vì cao độ nền tiếng Việt thấp hơn.",
+            "Drill bật hơi: tiếng Việt có đối lập hữu–vô thanh nhưng không có đối lập bật hơi và không có塞擦音, nên dễ \"overemphasize or underemphasize the degree of aspiration\".",
+            "Drill làm phẳng T3 khi nói liền (nhóm Nam: biên độ F0 nhỏ + thời lượng ngắn hơn).",
+            "Ghi log tỉ lệ lỗi theo nhóm thanh điệu / thanh mẫu / vận mẫu, không tổng quát hoá tỉ lệ của 42 người thành quần thể.",
+            "Chú ý âm r và âm ü là âm khó với người mới — nhưng không có nghiên cứu riêng đo lỗi ü/r của người Việt (gap đã ghi).",
+            "Luyện cặp thanh điển hình Part I HSKK: nhắc hěn → hèn (ghi nhận nguồn institute, không phải rubric chính thức)."
+          ],
+          "resources": [
+            {
+              "title": "ICPhS 2023 — Disyllabic tones by Vietnamese speakers",
+              "url": "https://www.internationalphoneticassociation.org/icphs-proceedings/ICPhS2023/full_papers/48.pdf",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Airiti — 越南受試者的華語聲調聽辨研究",
+              "url": "https://www.airitilibrary.com/Article/Detail/22211624-202012-202107080029-202107080029-3-37",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Tran T.A.N. 2024 — 越南籍學習者華語聲調偏誤 (Zenodo)",
+              "url": "https://doi.org/10.5281/zenodo.15549790",
+              "kind": "article",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot, mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "ICA — Chuyển di tiêu cực, lỗi phát âm người Việt",
+              "url": "http://ica.org.vn/anh-huong-cua-chuyen-di-tieu-cuc-tu-tieng-me-de-den-phat-am-tieng-trung-cua-nguoi-hoc-viet-nam-bang-chung-tu-khao-sat-va-can-thiep-ngu-am/",
+              "kind": "article",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, tra lại bằng trình duyệt."
+            },
+            {
+              "title": "GlobeThesis — Pronunciation of zh/ch/sh of Vietnamese students",
+              "url": "https://www.globethesis.com/?t=2335330512481726",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Nguyen & Nguyen 2026 — Aspirated/unaspirated, Vietnamese learners",
+              "url": "https://doi.org/10.17977/um073v5i12026p1-11",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Jin 2023 — Vietnamese adult learners' phonological biases",
+              "url": "https://doi.org/10.2991/978-2-38476-062-6_37",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Chinese Pronunciation Wiki — A2 pronunciation points",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/A2_pronunciation_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Groningen Confucius Institute — HSKK Primary guide",
+              "url": "https://www.confuciusgroningen.nl/news/your-step-by-step-guide-to-hskk-primary-success",
+              "kind": "article",
+              "note": "Nguồn institute/cộng đồng, không phải rubric HSKK chính thức."
+            }
+          ]
+        },
+        {
+          "title": "Drills: tone pairs, minimal pairs, shadowing",
+          "why": "Dạy thanh đơn âm quá nhiều không hiệu quả: \"the best way of practising tones in Chinese is to move to words consisting of two syllables as soon as possible\". Có 20 tổ hợp tone pair, thanh nhẹ chỉ đứng cuối. Minimal pair chẩn đoán lỗi cả nghe lẫn nói. Shadowing có bằng chứng: cả nhóm luyện theo giáo trình lẫn shadowing video authentic đều cải thiện độ chính xác thanh ở câu nói tự phát.",
+          "activities": [
+            "Học 20 tone pair theo thứ tự khó tăng dần: \"1-1 ←easiest ... 3-2 ←hardest\"; 1 từ cho mỗi tổ hợp, tập tới khi nói đúng mọi lúc rồi chép pattern sang từ khác.",
+            "Tone pair bingo: người mới chỉ test 1 hàng/cột mỗi lần — \"with only one row or column at a time!\".",
+            "Minimal pair: ghép cặp thanh (bingo 20 tổ hợp) + cặp âm cuốn lưỡi sh–s / zh–z; ví dụ từ nguồn 好 hǎo / 老 lǎo, 买 mǎi / 卖 mài.",
+            "Shadowing 6 bước [Suy luận tự sắp từ các bước có sẵn trong nguồn]: (1) chọn clip 30–60 giây có transcript, nghe hiểu + chép chính tả; (2) giảm tốc lặp từng câu; (3) nói song song overlay, không pause giữa câu; (4) ghi âm đối chiếu transcript; (5) tách 2–3 câu lỗi lớn nhất lặp riêng; (6) ghi log lỗi và nghe lại mỗi tuần.",
+            "Mimicking: \"Practise until you can match tones, pace and intonation\".",
+            "Kèm bảng 1.000 tone pairs xếp theo level HSK/TOCFL trong Guide to Mandarin tones."
+          ],
+          "resources": [
+            {
+              "title": "Hacking Chinese — Tone pairs",
+              "url": "https://www.hackingchinese.com/focusing-on-tone-pairs-to-improve-your-mandarin-pronunciation/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Hacking Chinese — Minimal pairs / tone problems",
+              "url": "https://www.hackingchinese.com/a-smart-method-to-discover-problems-with-tones/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Hacking Chinese — Mimicking native speakers",
+              "url": "https://www.hackingchinese.com/mimicking-native-speakers-way-learning-chinese/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Hacking Chinese — Guide to Mandarin tones",
+              "url": "https://www.hackingchinese.com/the-hacking-chinese-guide-to-mandarin-tones/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Chinese Pronunciation Wiki — Tone pairs",
+              "url": "https://resources.allsetlearning.com/chinese/pronunciation/Tone_pairs",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "FluentU — Shadowing Chinese in steps",
+              "url": "https://www.fluentu.com/blog/chinese/shadowing-chinese/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Lu & Su 2024 — Shadowing & Mandarin tones (JSLP)",
+              "url": "https://doi.org/10.1075/jslp.22033.lu",
+              "kind": "article",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot, mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "StudyCLI — Tone changes in Mandarin",
+              "url": "https://studycli.org/learn-chinese/tone-changes-in-mandarin/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Loop nghe-nói hàng ngày và tài nguyên nghe",
+          "why": "Nghe phải chạy từ tuần 1, không chờ \"đủ ngữ pháp\": \"the listening ladder run alongside from week one\". Không có giáo viên chấm nên tự ghi âm và tự so transcript mới đo được lỗi.",
+          "activities": [
+            "[Suy luận] Hàng ngày ~30 phút: 10 phút shadowing bước 1–4, 10 phút tone pair bingo (1 hàng/cột), 10 phút minimal pair sh–s / zh–z + ghi log.",
+            "[Suy luận] Hàng tuần 1 lần: nghe lại toàn bộ bản ghi âm tuần, đếm lỗi lặp, chọn 1 lỗi (vd \"T4 thành T1\" hoặc \"under-apply 3-3\") làm trọng tâm tuần sau.",
+            "Chọn nguồn nghe có transcript hoặc phụ đề tiếng mẹ đẻ: Mandarin Corner, Slow Chinese Podcast, ChinesePod Newbie, FluentU.",
+            "Chọn show nghe theo nguyên tắc \"neutral accent with a clear diction: nói để ai cũng hiểu\" và giảm processing load."
+          ],
+          "resources": [
+            {
+              "title": "Mandarin Corner (web)",
+              "url": "https://mandarincorner.org/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Mandarin Corner — HSK 1 playlist (YouTube)",
+              "url": "https://www.youtube.com/playlist?list=PL7VdqFXO0Lzdu2U1q-_vZxcuWyqJEitZV",
+              "kind": "video",
+              "note": null
+            },
+            {
+              "title": "Slow Chinese Podcast 慢速汉语 (Apple Podcasts)",
+              "url": "https://podcasts.apple.com/us/podcast/slow-chinese-podcast-%E6%85%A2%E9%80%9F%E6%B1%89%E8%AF%AD-learn-chinese-%E5%AD%A6%E4%B8%AD%E6%96%87/id1562798369",
+              "kind": "podcast",
+              "note": null
+            },
+            {
+              "title": "慢速中文 Slow Chinese (Apple Podcasts)",
+              "url": "https://podcasts.apple.com/us/podcast/%E6%85%A2%E9%80%9F%E4%B8%AD%E6%96%87-slow-chinese/id1482243873",
+              "kind": "podcast",
+              "note": "Dự án RIÊNG, khác dự án 慢速汉语 — đừng lẫn tên. Không trích được mô tả chính thức từ trang chủ."
+            },
+            {
+              "title": "ChinesePod — Home (levels)",
+              "url": "https://www.chinesepod.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "ChinesePod — Start learning (Newbie path)",
+              "url": "https://www.chinesepod.com/start-learning-mandarin",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "FluentU — Shadowing Chinese",
+              "url": "https://www.fluentu.com/blog/chinese/shadowing-chinese/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "HSKK — thi nói 3 cấp (nếu mục tiêu có thi nói)",
+          "why": "HSKK gồm 3 cấp 初级/中级/高级, 6 kiểu bài (听后重复, 听后回答, 听后复述, 朗读, 看图说话, 回答问题), thi bằng thu âm. Rubric chính thức chỉ có 3 mức 高/中/低, KHÔNG công bố % trọng số phát âm — không diễn giải 3 mức thành thang % tự chế.",
+          "activities": [
+            "Luyện theo cấu trúc 初级: 27 câu = Part I 15 nghe-lặp lại + Part II 10 nghe-trả lời ngắn + Part III 2 trả lời (có pinyin, mỗi câu ≥5 câu nói);满分 100, đạt 60.",
+            "Mức từ vựng 初级 ~200 từ, aligned HSK1: \"the primary-level HSKK, 200 words is the minimum criterion\".",
+            "Đọc rubric 高/中/低 của từng kiểu bài: 听后重复, 朗读 (tiêu chí语音/语调 rõ nhất), 回答问题 (không作答 = 0 điểm).",
+            "Lưu ý bắt buộc thi nói kèm từ HSK 3: \"HSKK3-6级需与对应级别口语同时报名\"."
+          ],
+          "resources": [
+            {
+              "title": "chinesetest.cn — HSK Speaking Test (HSKK)",
+              "url": "https://www.chinesetest.cn/HSKK",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "汉考国际 — HSKK评分说明（自测用）",
+              "url": "https://admin.chinesetest.cn/gonewcontent.do?id=5709888",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HSK/HSKK Handbook (Chinese-English, PDF mirror)",
+              "url": "https://lllc.uiowa.edu/sites/lllc.uiowa.edu/files/2025-05/hsk_manual_chinese_and_english.pdf",
+              "kind": "article",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, tra lại bằng trình duyệt."
+            },
+            {
+              "title": "Sage — Review of HSKK (Assessing speaking proficiency)",
+              "url": "https://sage.cnpereading.com/doi/10.1177/02655322231163470",
+              "kind": "article",
+              "note": "Rubric HSKK chưa được nghiên cứu validate; \"no information has been provided and no study appears to have validated the design of the rubric\"."
+            },
+            {
+              "title": "chinesetest.cn — Thông báo",
+              "url": "https://www.chinesetest.cn/notice",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "iysc — Overall HSKK guide (format 3 cấp)",
+              "url": "http://www.iysc.org/the-overall-hskk-guide.html",
+              "kind": "article",
+              "note": "Mốc từ vựng HSKK trung cấp ≈ 900 từ là gợi ý, chưa kiểm (nguồn cộng đồng)."
+            },
+            {
+              "title": "GAPSK — HSK/HSKK (bắt buộc HSKK từ HSK 3)",
+              "url": "https://www.gapsk.org/hsk",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zh-g1",
+      "title": "G1 — HSK 1",
+      "goal": "Chốt 150 từ / 174 chữ (bảng HSK 2.0, F1), nói được câu tự giới thiệu, nghe được phần Listening của đề HSK 1.",
+      "duration_weeks": 15,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: đã qua G0 (đọc pinyin thành thạo trước khi gắn chữ).",
+        "Điều kiện ra [Suy luận]: tự làm trọn đề HSK 1 — 40 câu (Listening 20 + Reading 20), ~40 phút — tự chấm, không cần người khác.",
+        "Ước lượng thời lượng [Suy luận self-learn + giả định: 30–45 phút/ngày]: ~15 tuần, suy từ 15 bài HSK Standard Course 1 (150 từ, 45 điểm ngôn ngữ) + nhịp \"một chương mỗi tuần\".",
+        "54 điểm ngữ pháp HSK 1 là ước tính AllSet, chưa từng công bố chính thức (F7) — bắt buộc kèm nhãn này mỗi khi nêu."
+      ],
+      "topics": [
+        {
+          "title": "Quy tắc nét viết và bộ thủ tra cứu",
+          "why": "Vì sao phải đúng nét: muscle memory, chữ cân đối, viết nhanh, đúng chuẩn thi — \"Correct stroke order ... adheres to standard rules required for HSK and school exams\". 214 bộ Khang Hy chỉ dùng làm mục tra general reference, không bắt buộc học thuộc trước: \"There is no need to learn all the radicals first before learning characters.\"",
+          "activities": [
+            "Học 8 nét cơ bản: 横 héng, 竖 shù, 撇 piě, 捺 nà, 点 diǎn, 提 tí, 折 zhé, 钩 gōu.",
+            "Học 17 quy tắc cơ bản của Bộ GD Đài Loan (Handbook of Standard Form of Frequently Used Chinese Characters): trái→phải, trên→dưới, ngang trước sổ...",
+            "Áp dụng khung giản thể; khi gặp bản chữ khác khung thì ghi lại chỗ sai thay vì đoán (17 quy tắc là tài liệu chuẩn phồn thể của Đài Loan).",
+            "Dùng bảng bộ thủ để tra nghĩa khi gặp chữ mới, không học thuộc 214 bộ.",
+            "So từng chữ với stroke order diagram (Pleco có 500 diagram miễn phí trong app free)."
+          ],
+          "resources": [
+            {
+              "title": "Wikipedia — Chinese character strokes",
+              "url": "https://en.wikipedia.org/wiki/Chinese_character_strokes",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Unicode L2 — 8 basic strokes (baike ref)",
+              "url": "https://www.unicode.org/L2/L2014/14011-cjk-strokes-add.pdf",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Chinestudy — eight essential strokes",
+              "url": "https://www.chinestudy.com/blog/mastering-strokes-of-chinese-characters",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "MOE Taiwan — Basic Rules of Stroke Order",
+              "url": "https://stroke-order.learningweb.moe.edu.tw/page.jsp?ID=46&la=1",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HanziStroke — why stroke order matters",
+              "url": "https://www.hanzistroke.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Arch Chinese — Chinese Radicals",
+              "url": "https://archchinese.com/traditional_chinese_radicals.html",
+              "kind": "site",
+              "note": "Bảng 214 bộ là bảng cho chữ PHỒN THỂ; khi tra chữ giản thể thì tra theo hình dạng thật của chữ đó."
+            },
+            {
+              "title": "Oxford CTCFL — Chinese Characters and Radicals",
+              "url": "https://www.ctcfl.ox.ac.uk/materials_radical-index",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Pleco — Google Play listing",
+              "url": "https://play.google.com/store/apps/details?id=com.pleco.chinesesystem",
+              "kind": "app",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Từ vựng HSK 1: 150 từ / 174 chữ và deck Anki",
+          "why": "Bảng HSK 2.0 là bảng duy nhất dùng trong bộ tài liệu (F1). Danh sách HSK gồm cả từ đơn và cụm từ: HSK1 có 大 dà, 多 duō bên cạnh 高兴 gāoxìng, 出租车 chūzūchē. Số chữ 174 chỉ là con số HSK 2.0; khung HSK 3.0 khác (HSK1 300 chữ) và hai khung không trộn.",
+          "activities": [
+            "Học 150 từ / 174 chữ theo cấp, học theo chữ (character → các từ chứa chữ đó) rồi drill flashcard theo cấp.",
+            "Chọn 1 deck Anki có sẵn thay vì tự tạo: Chinese Vocabulary (HSK 1-4), HSK Word list [EN/CH] (có stroke order makemeahanzi + audio), HSK Level 1 (màu tone), HSK Core decks (native audio, không cần đăng ký).",
+            "Học câu/cụm chứ không học từ rời: \"Study sentences, not just vocabulary: Learn words in context\".",
+            "Phân biệt từ điển chữ và từ điển từ khi tra: \"The character dictionary gives detailed information about single Chinese characters; the word dictionary contains words consisting of 1 or more Chinese characters.\"",
+            "Gặp từ 1 lần trong doc/graded reader thì vẫn chưa tính — đánh dấu vào Anki để biến \"lần gặp\" thành lịch ôn.",
+            "Dùng stack tối giản: Pleco (điện thoại, SRS + vẽ nét) + MDBG (tra bộ thủ/số nét) + 1 deck Anki; không cài song song nhiều từ điển."
+          ],
+          "resources": [
+            {
+              "title": "HSK Guide — curriculum tracks",
+              "url": "https://www.hsk.guide/curriculum",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HSK Academy — chữ Hán HSK 1–4",
+              "url": "https://hsk.academy/en/blog/chinese-characters-for-hsk-1-to-4",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "hanzidb — HSK character list",
+              "url": "http://hanzidb.org/character-list/hsk",
+              "kind": "site",
+              "note": "404 (kiểm 2026-09-23) — link hỏng lúc kiểm, tra lại bằng trình duyệt. Số chữ HSK 4 = 1.064 là suy từ wordlist, không phải bảng chữ quốc gia phát hành riêng."
+            },
+            {
+              "title": "MandarinBean — HSK 1 vocab list",
+              "url": "https://mandarinbean.com/hsk-1-vocabulary-list",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet Vocabulary Wiki — HSK 1 Vocabulary",
+              "url": "https://resources.allsetlearning.com/chinese/vocabulary/HSK_1_Vocabulary",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AnkiWeb — Chinese Vocabulary (HSK 1-4)",
+              "url": "https://ankiweb.net/shared/info/1352957654",
+              "kind": "app",
+              "note": "Deck cộng đồng: audio/stroke order do người đăng tự công bố, chưa được chuẩn hóa độc lập."
+            },
+            {
+              "title": "AnkiWeb — HSK Word list [EN/CH]",
+              "url": "https://ankiweb.net/shared/info/1152538376",
+              "kind": "app",
+              "note": "Deck cộng đồng: audio/stroke order do người đăng tự công bố, chưa được chuẩn hóa độc lập."
+            },
+            {
+              "title": "AnkiWeb — HSK Level 1",
+              "url": "https://ankiweb.net/shared/info/2125589644",
+              "kind": "app",
+              "note": "Deck cộng đồng: audio/stroke order do người đăng tự công bố, chưa được chuẩn hóa độc lập."
+            },
+            {
+              "title": "HSK Core — HSK Anki decks 1–6",
+              "url": "https://hskcore.com/hsk-anki-decks",
+              "kind": "app",
+              "note": null
+            },
+            {
+              "title": "MDBG — main",
+              "url": "https://www.mdbg.net/chinese/dictionary",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "MDBG — character dictionary",
+              "url": "https://www.mdbg.net/chinese/dictionary?page=chardict",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Pleco — official site",
+              "url": "https://www.pleco.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Reddit r/ChineseLanguage — so sánh textbook (tone/sentence study)",
+              "url": "https://www.reddit.com/r/ChineseLanguage/comments/jai9h1/comparison_practical_chinese_reader_vs_hsk_books",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Ngữ pháp HSK 1 (54 điểm, ước tính AllSet)",
+          "why": "Số điểm ngữ pháp theo cấp lấy từ AllSet: HSK 1 = 54, HSK 2 = 79, HSK 3 = 87, HSK 4 = 115. Bắt buộc kèm mọi khi nêu: \"These HSK levels are estimates, since the 2012 HSK standard never officially released a clear standard for grammar points.\" Mapping CEFR↔HSK do chính wiki đặt ra: A1 = Beginner/HSK 1–2, A2 = Elementary/HSK 2–3, B1 = Intermediate/HSK 3–4, B2 = HSK 4–5.",
+          "activities": [
+            "Học điểm ngữ pháp theo cấp HSK trên trang AllSet; mở trang Grammar Wiki mỗi khi giáo trình giải thích chưa đủ.",
+            "Điểm tiêu biểu HSK 1: 了 (hoàn thành) — \"The simplest way to use 了 (le) is to just put it after a verb\" (cấu trúc Subj. + Verb + 了; wiki gắn nhãn A2/HSK1).",
+            "Lượng từ (measure words) — Number + Measure Word + Noun; \"一个人。一杯水。\"; từ vựng lượng từ riêng (本 běn, 个 gè) nằm ở HSK 1, cấu trúc tính theo HSK 2.",
+            "Làm câu mẫu HSK từ giáo trình sau mỗi điểm ngữ pháp, rồi đọc bài trong giáo trình."
+          ],
+          "resources": [
+            {
+              "title": "AllSet — HSK 1 grammar points",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/HSK_1_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — 2012 HSK grammar points",
+              "url": "http://resources.allsetlearning.com/chinese/grammar/2012_HSK_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Grammar points by level (CEFR↔HSK)",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Grammar_points_by_level",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet Chinese Grammar Wiki — Main",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Main_Page",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Expressing completion with \"le\"",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Expressing_completion_with_%22le%22",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Using \"ba\" sentences",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/%22Ba%22_sentence",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "SRS: quy tắc ôn 1-3-7-14-30 và FSRS",
+          "why": "1-3-7-14-30 ngày là quy tắc thực hành phổ biến, KHÔNG phải định luật: \"review 1 day after learning, then 3 days, then 7, then 14, then 30\". Anki từ 23.10 có 2 thuật toán (SM-2 và FSRS). Không cộng hai lịch: 1-3-7-14-30 là lịch tay khi tự lập deck; SM-2/FSRS là lịch của app.",
+          "activities": [
+            "Chọn 1 trong 2: (a) neo thủ công theo 1-3-7-14-30 rồi để app giãn ra; (b) bật FSRS và để thuật toán quyết định khoảng cách.",
+            "Đặt ngân sách thẻ mới/ngày theo mức tổng review còn làm được trong buổi tự học (ước lượng 15–30 phút ôn); vượt ngân sách thì dừng thêm thẻ mới, không dồn nợ ôn.",
+            "Đã bật app thì đừng ghi ngày ôn tay đè lên app.",
+            "Hiểu mô hình DSR của FSRS (Difficulty, Stability, Retrievability) với retention mặc định 90%."
+          ],
+          "resources": [
+            {
+              "title": "Lexie — 1-3-7-14-30 schedule",
+              "url": "https://www.lexielearn.com/guides/spaced-repetition-study-method",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "StudyCards AI — 1-3-7-14-30 explained",
+              "url": "https://studycardsai.com/blog/spaced-repetition-schedule-day-1-day-3-day-7-day",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Anki FAQ — algorithm (SM-2/FSRS)",
+              "url": "https://faqs.ankiweb.net/what-spaced-repetition-algorithm.html",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Awesome FSRS — The Algorithm",
+              "url": "https://github.com/open-spaced-repetition/awesome-fsrs/wiki/The-Algorithm",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "SM-2 implementation reference",
+              "url": "https://github.com/cnnrhill/sm-2",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Giáo trình tự học và đề HSK 1",
+          "why": "HSK Standard Course 1–4 hợp tự học nhất trong các sách: series tự nhận phù hợp \"self-taught learners\"; cấu trúc một bài = từ vựng + ngữ pháp + luyện thi, có Teacher's Book + đáp án + audio. Nhược điểm theo review cộng đồng: \"HSK Standard Course teaches HSK Chinese, not living Chinese. The dialogues are functional but stilted.\" Integrated Chinese cần giáo viên nên không phải lựa chọn tối ưu cho người học một mình.",
+          "activities": [
+            "Đi theo nhịp 1 chương/tuần + daily input + graded reader at bedtime + 1 buổi giao tiếp (khối lượng gợi ý của nguồn cộng đồng, không phải yêu cầu).",
+            "Tự làm trọn đề HSK 1: 40 câu (Listening 20 + Reading 20), ~40 phút; tự chấm, không cần người khác.",
+            "Không sách nào là \"tốt nhất tuyệt đối\" — mọi đánh giá textbooks trên là review cộng đồng, hạ tin cậy, chưa kiểm độc lập.",
+            "Chọn NPCR nếu muốn luyện viết/phonetics sâu hơn; bù điểm ngữ pháp yếu bằng Grammar Wiki."
+          ],
+          "resources": [
+            {
+              "title": "HSK Standard Course 1 Textbook",
+              "url": "https://www.hskstandardcourse.com/hsk-standard-course-level-1/hsk-standard-course-1-textbook",
+              "kind": "book",
+              "note": null
+            },
+            {
+              "title": "HSK Standard Course (site chính thức series)",
+              "url": "https://www.hskstandardcourse.com/",
+              "kind": "book",
+              "note": null
+            },
+            {
+              "title": "Zhong Chinese — so sánh 3 textbook (2026)",
+              "url": "https://www.zhongchinese.com/articles/guides/best-mandarin-textbooks",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "DeckDuck — Best Chinese Textbooks 2026",
+              "url": "https://deckduck.com/blog/best-chinese-textbooks",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "All Language Resources — NPCR mini-review",
+              "url": "https://www.alllanguageresources.com/new-practical-chinese-reader",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "chinesetest.cn — HSK Level 1 structure",
+              "url": "https://www.chinesetest.cn/HSK/1",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "GraphChinese — HSK test format",
+              "url": "https://graphchinese.com/hsk-test-format",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HSK Online / SuperTest",
+              "url": "http://hskonline.com/index.html",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "Chinese Zero to Hero — HSK 1 course (dùng HSK Standard Course)",
+              "url": "https://chinesezerotohero.teachable.com/p/hsk-1-course",
+              "kind": "course",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zh-g2",
+      "title": "G2 — HSK 2",
+      "goal": "Nâng tích lũy lên 300 từ / 347 chữ (F1), giao tiếp được các tình huống thường ngày và công việc đơn giản.",
+      "duration_weeks": 14,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: qua G0 hoàn toàn + G1 đạt chuẩn tự kiểm.",
+        "Điều kiện ra [Suy luận]: tự làm trọn đề HSK 2 — 60 câu (Listening 35 + Reading 25), ~55 phút; HSK 1–2 không có phần viết.",
+        "Ước lượng thời lượng [Suy luận self-learn + giả định: 30–45 phút/ngày]: ~12–16 tuần cùng nhịp 1 chương/tuần. Gap: số bài của HSK Standard Course 2 không trích được (chỉ có \"15 lessons\" cho cấp 1) → ước lượng này là suy luận thuần, hiệu chỉnh khi dùng thật.",
+        "79 điểm ngữ pháp HSK 2 = ước tính AllSet, chưa từng công bố chính thức (F7)."
+      ],
+      "topics": [
+        {
+          "title": "Từ vựng HSK 2: 300 từ / 347 chữ + SRS 300 từ",
+          "why": "Giai đoạn này chỉ là tích lũy trên bảng HSK 2.0 (F1); loop SRS phải chạy ổn định vì G3 còn dựa vào nó.",
+          "activities": [
+            "Nâng deck lên 300 từ / 347 chữ theo cấp, giữ nhịp ôn hằng ngày.",
+            "Ưu tiên học cụm từ trong ngữ cảnh, giữ nguyên nguyên tắc \"Study sentences, not just vocabulary\".",
+            "Dùng word list cộng đồng có sẵn (chỉ dùng để tra, không coi là bảng chữ quốc gia): GitHub HSK-Vocab, HSK-3.0, complete-hsk-vocabulary, hsk-word-list (có tiếng Việt).",
+            "Gặp từ mới trong bài đọc → đánh dấu vào Anki ngay, không dồn cuối tuần."
+          ],
+          "resources": [
+            {
+              "title": "HSK Guide — curriculum tracks",
+              "url": "https://www.hsk.guide/curriculum",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet Vocabulary Wiki",
+              "url": "http://resources.allsetlearning.com/chinese/vocabulary",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "GitHub sawcordwell/HSK-Vocab (CSV HSK 2.0)",
+              "url": "https://github.com/sawcordwell/HSK-Vocab",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "GitHub krmanik/HSK-3.0",
+              "url": "https://github.com/krmanik/HSK-3.0",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "GitHub drkameleon/complete-hsk-vocabulary",
+              "url": "https://github.com/drkameleon/complete-hsk-vocabulary",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "GitHub haidinhtuan/hsk-word-list (có tiếng Việt)",
+              "url": "https://github.com/haidinhtuan/hsk-word-list",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "AnkiWeb — Chinese Vocabulary (HSK 1-4)",
+              "url": "https://ankiweb.net/shared/info/1352957654",
+              "kind": "app",
+              "note": "Deck cộng đồng: audio/stroke order do người đăng tự công bố, chưa được chuẩn hóa độc lập."
+            }
+          ]
+        },
+        {
+          "title": "Ngữ pháp HSK 2 (79 điểm, ước tính AllSet)",
+          "why": "Giai đoạn này tăng khả năng giao tiếp tình huống thường ngày và công việc đơn giản; 79 điểm là ước tính AllSet (F7), nên mở trang wiki theo cấp mỗi khi giáo trình giải thích chưa đủ.",
+          "activities": [
+            "Điểm tiêu biểu HSK 2: cấu trúc 是…的 — \"我是来上海旅游的。\" và \"你是哪个学校的？\".",
+            "Lượng từ theo cấu trúc: Number + Measure Word + Noun — \"一个人。一杯水。\"",
+            "Làm câu mẫu HSK từ giáo trình sau mỗi điểm ngữ pháp; ghi lỗi vào error notebook.",
+            "Ghi log lỗi: ngày; cấu trúc/chữ sai; câu sai gốc; phiên bản đúng; bối cảnh sai; link trang Grammar Wiki tương ứng."
+          ],
+          "resources": [
+            {
+              "title": "AllSet — HSK 2 grammar points",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/HSK_2_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — 2012 HSK grammar points",
+              "url": "http://resources.allsetlearning.com/chinese/grammar/2012_HSK_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Grammar points by level (CEFR↔HSK)",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Grammar_points_by_level",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet Chinese Grammar Wiki — Main",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Main_Page",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Đề HSK 2 và giữ loop nghe-nói",
+          "why": "HSK 2 = 60 câu (Listening 35 + Reading 25), ~55 phút, điểm 200/300; \"HSK 1 and HSK 2 have no writing section\". Loop shadowing/tone pairs phải giữ nguyên từ G0, không được bỏ vì đã lên cấp.",
+          "activities": [
+            "Tự làm trọn đề HSK 2 trong điều kiện thi thật, tự chấm.",
+            "Giữ loop hằng ngày: 10 phút shadowing + 10 phút tone pair bingo + 10 phút minimal pair và ghi log lỗi.",
+            "Nghe input đơn giản hằng ngày (Mandarin Corner HSK 1–6, slow conversation) thay vì chỉ ôn sách.",
+            "Ghi lỗi nghe sai theo dạng thanh (T1↔T4, under-apply 3-3) để đưa vào trọng tâm tuần sau."
+          ],
+          "resources": [
+            {
+              "title": "GraphChinese — HSK test format",
+              "url": "https://graphchinese.com/hsk-test-format",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Mandarin Corner (web)",
+              "url": "https://mandarincorner.org/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "ChinesePod — Home (levels)",
+              "url": "https://www.chinesepod.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "FluentU — Shadowing Chinese in steps",
+              "url": "https://www.fluentu.com/blog/chinese/shadowing-chinese/",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Hacking Chinese — Guide to Mandarin tones",
+              "url": "https://www.hackingchinese.com/the-hacking-chinese-guide-to-mandarin-tones/",
+              "kind": "article",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zh-g3",
+      "title": "G3 — HSK 3",
+      "goal": "Tích lũy 600 từ / 617 chữ (F1); bắt đầu đọc graded reader và viết câu — từ HSK 3 mới có phần viết.",
+      "duration_weeks": 18,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: qua G2; đã có \"tone ears\" và loop SRS chạy ổn định.",
+        "Điều kiện ra [Suy luận]: tự làm trọn đề HSK 3 — 80 câu (Listening 40 + Reading 30 + Writing 10), ~90 phút. ĐỀ KHÔNG CÒN IN PINYIN, có phần viết.",
+        "Ước lượng thời lượng [Suy luận self-learn + giả định: 30–45 phút/ngày]: ~15–20 tuần (volume \"L1–3 mỗi cấp 1 cuốn\" + 1 chương/tuần; gap số bài như G2).",
+        "87 điểm ngữ pháp HSK 3 = ước tính AllSet, chưa từng công bố chính thức (F7)."
+      ],
+      "topics": [
+        {
+          "title": "Ngữ pháp HSK 3 (87 điểm, ước tính AllSet)",
+          "why": "Điểm ngữ pháp B1/HSK 3 là 把, 被 và đổi trạng thái ⋯了 — đây là phần mở rộng cấu trúc câu cần thiết để bắt đầu viết câu. B1 tương ứng HSK 3–4 theo mapping của chính wiki (143 điểm B1).",
+          "activities": [
+            "Học cấu trúc 把: Subj. + 把 + Obj. + [Verb Phrase]; lưu ý \"The object should be known. So it has already been mentioned or discussed previously.\"",
+            "Học cấu trúc 被: Subj. + 被 + Doer + Verb Phrase.",
+            "Học đổi trạng thái với 了 (⋯⋯了).",
+            "Làm câu mẫu HSK từ giáo trình, rồi mới chuyển sang viết câu tự do."
+          ],
+          "resources": [
+            {
+              "title": "AllSet — HSK 3 grammar points",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/HSK_3_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Using \"ba\" sentences",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/%22Ba%22_sentence",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — B1 grammar points with HSK",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/B1_grammar_points_with_HSK",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — 2012 HSK grammar points",
+              "url": "http://resources.allsetlearning.com/chinese/grammar/2012_HSK_grammar_points",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Đọc: vào graded reader từ HSK 3",
+          "why": "Theo thứ tự chốt trong nguồn: trước HSK 3 chỉ đọc bài/dialogue trong giáo trình; từ HSK 3 mới vào graded reader, bắt đầu level thấp nhất rồi lên. Nguyên tắc chọn sách: \"If you can't read something without pinyin – it's too hard for you right now\" — không đọc sách gắn pinyin.",
+          "activities": [
+            "Bắt đầu level thấp nhất của một trong ba series: Mandarin Companion (Breakthrough / Level I / Level II), Chinese Breeze (300 / 500 / 750 / 1.100 từ kiểm soát), DuChinese (80+ graded stories, 3000+ readings).",
+            "Dùng lặp để tích lũy encounter: \"you need 10 – 30 encounters with a word to connect it to its meaning\" — đây là claim của trang Mandarin Companion, chỉ là quy tắc thực hành phổ biến, không thành chuẩn khoa học (F8).",
+            "Mỗi từ mới gặp trong graded reader → đánh dấu vào Anki.",
+            "Lưu ý: catalog chính thức của NXB Chinese Breeze không trích được, dữ liệu cấp độ chỉ qua review/listing bên thứ ba."
+          ],
+          "resources": [
+            {
+              "title": "Mandarin Companion — homepage",
+              "url": "https://mandarincompanion.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Mandarin Companion — Why graded readers",
+              "url": "https://mandarincompanion.com/why-graded-readers",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "HSKStory — Chinese Breeze review (2nd.)",
+              "url": "https://hskstory.com/guides/chinese-breeze-graded-readers",
+              "kind": "article",
+              "note": "Nguồn thứ cấp; không trích được catalog chính thức của NXB."
+            },
+            {
+              "title": "Purple Culture — Chinese Breeze listings",
+              "url": "https://www.purpleculture.net/reading-materials-c-1_101",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "DuChinese — homepage",
+              "url": "https://duchinese.net/",
+              "kind": "app",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Viết: tay hay gõ IME, và format đề viết HSK 3",
+          "why": "Bằng chứng đối chiếu 2 hướng, không có kết luận \"chỉ dùng một cách\": tổng quan 27 thực nghiệm cho thấy gõ tốt hơn cho nhận thức âm và ánh xạ phonology–orthography, viết tay tốt hơn cho orthography–semantics. Khuyến nghị thực hành: người mới viết tay để hiểu chữ vận hành, nhưng không cần viết tay hàng nghìn chữ về sau. Gõ pinyin không ép nhớ hình chữ.",
+          "activities": [
+            "Giai đoạn đầu viết tay tối đa 10 chữ mới/ngày theo đúng nét (dùng app vẽ nét để đối chiếu); phần còn lại ôn bằng nhận diện khi gõ.",
+            "Chuyển sang gõ IME cho khối lượng ôn lớn.",
+            "Bắt đầu quen format viết từ HSK 3 vì từ HSK 3 mới có phần thi viết — \"From HSK 3 the writing section appears, the paper scores out of 300\".",
+            "Chấm theo checklist tự review: mỗi đoạn có 1 câu chủ đề; mỗi câu mới nhắc lại hoặc phát triển theme câu trước; không lặp từ khóa quá 3 lần nếu chưa dùng cohesive device."
+          ],
+          "resources": [
+            {
+              "title": "ScienceDirect — typing vs handwriting review",
+              "url": "https://www.sciencedirect.com/science/article/abs/pii/S0883035521000100",
+              "kind": "article",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot, mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            },
+            {
+              "title": "Acta Psych Sinica — handwriting vs pinyin keyboarding",
+              "url": "https://journal.psych.ac.cn/acps/EN/10.3724/SP.J.1041.2016.01258",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "Hacking Chinese — learn characters best advice",
+              "url": "https://www.hackingchinese.com/my-best-advice-on-how-to-learn-chinese-characters",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "DCU — handwriting or type",
+              "url": "https://www.dcu.ie/humanitiesandsocialsciences/news/2020/01/handwriting-or-type-whats-the-future-of-learning-chinese",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "GraphChinese — HSK test format",
+              "url": "https://graphchinese.com/hsk-test-format",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Pleco — Google Play listing",
+              "url": "https://play.google.com/store/apps/details?id=com.pleco.chinesesystem",
+              "kind": "app",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Đề HSK 3 và error notebook",
+          "why": "HSK 3 = 80 câu (Listening 40 + Reading 30 + Writing 10), ~90 phút, điểm 300/300, đề không còn in pinyin. Không có giáo viên chấm nên tự lập sổ lỗi để có dữ liệu lỗi lặp.",
+          "activities": [
+            "Tự làm trọn đề HSK 3 trong điều kiện thi thật (không tra pinyin), tự chấm.",
+            "Ghi error notebook mỗi lỗi 1 dòng: ngày; cấu trúc/chữ sai; câu sai gốc; phiên bản đúng; bối cảnh sai (đọc / viết tay / gõ IME / nói / nghe); link trang Grammar Wiki hoặc trang nguồn.",
+            "Mỗi tuần đọc lại toàn sổ một lần; lỗi nào lặp lại ≥2 lần thì làm riêng bài tập cho cấu trúc đó.",
+            "Ghi lỗi thật, không ghi chung chung: \"sai 了\" vô ích — phải ghi đúng câu đã nói/viết ra.",
+            "Chữ viết sai (thiếu nét, sai thứ tự nét) ghi cùng trang với lỗi ngữ pháp, tách cột bối cảnh.",
+            "Gap đã ghi: 3 file research không có mẫu error notebook sẵn — format này là suy luận, chưa có nguồn đối chiếu."
+          ],
+          "resources": [
+            {
+              "title": "GraphChinese — HSK test format",
+              "url": "https://graphchinese.com/hsk-test-format",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "chinesetest.cn — HSK (trang chính thức CTI)",
+              "url": "https://www.chinesetest.cn/HSK",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "New HSK Test Syllabus (mobile)",
+              "url": "https://m.chinesetest.cn/syllabus",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HSK Standard Course (site chính thức series)",
+              "url": "https://www.hskstandardcourse.com/",
+              "kind": "book",
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zh-g4",
+      "title": "G4 — HSK 4 + duy trì",
+      "goal": "Chốt 1.200 từ / 1.064 chữ (F1, số chữ suy từ wordlist); trò chuyện đa chủ đề; duy trì input hằng ngày lâu dài.",
+      "duration_weeks": 22,
+      "milestones": [
+        "Điều kiện vào [Suy luận]: qua G3, có graded reader đọc được ở mức không tra pinyin liên tục.",
+        "Điều kiện ra [Suy luận]: tự làm trọn đề HSK 4 — 100 câu (Listening 45 + Reading 40, Writing 15 gồm 10 câu sắp chữ + 5 câu viết theo tranh/từ), ~105 phút, Writing 25 phút. Điểm đạt 180/300 và hiệu lực 2 năm: nguồn community → hạ tin cậy, ưu tiên handbook, chưa đối chiếu handbook trong 3 file (F5).",
+        "Ước lượng thời lượng [Suy luận self-learn + giả định: 30–45 phút/ngày]: ~20–25 tuần (HSK 4 = 2 volume theo \"L4–6 mỗi cấp 2 cuốn\"; gap số bài) + duy trì không có hạn chót.",
+        "115 điểm ngữ pháp HSK 4 = ước tính AllSet, chưa từng công bố chính thức (F7). Gap: file nguồn chỉ trích được tổng số 115 điểm, không trích được mẫu câu riêng cho HSK 4."
+      ],
+      "topics": [
+        {
+          "title": "Ngữ pháp HSK 4 (115 điểm, ước tính AllSet)",
+          "why": "B1 tương ứng HSK 3–4 và B2 tương ương HSK 4–5 theo mapping của wiki; đây là lớp ngữ pháp cuối trong khung HSK 1–4 của bộ tài liệu.",
+          "activities": [
+            "Học 115 điểm ngữ pháp HSK 4 trên trang AllSet; coi đây là ước tính, không phải chuẩn chính thức.",
+            "Bù phần mẫu câu HSK 4 chưa trích được bằng cách luyện từ các điểm B1 liên quan (143 điểm) và NPCR để luyện viết/phonetics.",
+            "Ghi lỗi cấu trúc vào error notebook kèm link trang Grammar Wiki."
+          ],
+          "resources": [
+            {
+              "title": "AllSet — HSK 4 grammar points",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/HSK_4_grammar_points",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — B1 grammar points with HSK",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/B1_grammar_points_with_HSK",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — Grammar points by level (CEFR↔HSK)",
+              "url": "https://resources.allsetlearning.com/chinese/grammar/Grammar_points_by_level",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "AllSet — 2012 HSK grammar points",
+              "url": "http://resources.allsetlearning.com/chinese/grammar/2012_HSK_grammar_points",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Đề HSK 4: cấu trúc, điểm và độ tin cậy",
+          "why": "HSK 4 có 3 phần: Listening comprehension, Reading comprehension và Writing; Writing gồm 15 items / 25 phút. Mốc đạt 180/300 và hiệu lực 2 năm lấy từ nguồn cộng đồng/trung tâm nên hạ tin cậy (F5), cần xác minh lại ở nguồn chính thức trước khi dựa vào.",
+          "activities": [
+            "Tự làm trọn đề HSK 4 trong điều kiện thi thật, tự chấm, không cần người khác.",
+            "Luyện riêng 10 câu sắp chữ + 5 câu viết theo tranh/từ.",
+            "Đối chiếu cấu trúc đề với handbook khi có thể; không coi số liệu điểm đạt/hiệu lực từ nguồn community là chuẩn.",
+            "Nếu muốn thi nói: HSKK trung cấp ≈900 từ là mức gợi ý, chưa kiểm (F4); bắt buộc thi nói kèm từ HSK 3."
+          ],
+          "resources": [
+            {
+              "title": "DigMandarin — HSK Level 4 guide",
+              "url": "https://www.digmandarin.com/hsk-level-4",
+              "kind": "site",
+              "note": "Nguồn community; số điểm đạt/hiệu lực chưa đối chiếu handbook (F5)."
+            },
+            {
+              "title": "HSK/HSKK Handbook (Chinese-English, PDF mirror)",
+              "url": "https://lllc.uiowa.edu/sites/lllc.uiowa.edu/files/2025-05/hsk_manual_chinese_and_english.pdf",
+              "kind": "article",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, tra lại bằng trình duyệt."
+            },
+            {
+              "title": "HSK complete guide (PDF, Konfucius Olomouc)",
+              "url": "https://konfucius.upol.cz/fileadmin/userdata/cm/Konfucius/HSK_complete.pdf",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "GraphChinese — HSK test format",
+              "url": "https://graphchinese.com/hsk-test-format",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "India China Academy — HSK & YCT (điểm/phí hiệu lực)",
+              "url": "https://www.indiachinaacademy.com/hsk-yct-exams",
+              "kind": "article",
+              "note": "Nguồn community/trung tâm; hạ tin cậy (F5), cần xác minh ở nguồn chính thức."
+            },
+            {
+              "title": "UWI Confucius — HSK levels & CEFR",
+              "url": "https://sta.uwi.edu/confucius/chinese-proficiency-test-hsk",
+              "kind": "article",
+              "note": "Nguồn community; mapping CEFR chưa từng official."
+            },
+            {
+              "title": "iysc — Overall HSKK guide (format 3 cấp)",
+              "url": "http://www.iysc.org/the-overall-hskk-guide.html",
+              "kind": "article",
+              "note": "Mốc từ vựng HSKK trung cấp ≈ 900 từ là gợi ý, chưa kiểm (F4)."
+            }
+          ]
+        },
+        {
+          "title": "Duy trì sau HSK 4: loop tuần, tháng và đo lường",
+          "why": "Sau HSK 4 không có hạn chót; loop phải chuyển từ \"tăng tích lũy\" sang \"giữ và mở rộng input\". Mốc nền: theo UWI (community, mapping CEFR chưa từng official) HSK 4 tương ứng B2, 1.200 từ.",
+          "activities": [
+            "[Suy luận] Weekly review ~30 phút: ôn thẻ SRS tới hạn; nghe lại 1 đoạn đã shadowing trong tuần; đọc tiếp graded reader (hoặc bài giáo trình nếu chưa tới HSK 3); so error notebook, đếm lỗi lặp lại.",
+            "[Suy luận] Monthly review ~90 phút: ghi âm nói tự do 1–3 phút; viết 1 đoạn ngắn (tay hoặc IME); đọc lại toàn bộ error notebook tháng, chọn 3 lỗi lặp nhiều nhất thành mục ôn tháng sau; đối chiếu chỉ số với tháng trước.",
+            "[Suy luận] Đo lường: số ngày duy trì SRS liên tục; số thẻ qua đủ vòng ôn; số trang/bài graded reader đã đọc; số lỗi mới và số lỗi lặp trong error notebook; số buổi nói đã thực sự nói (không chỉ nghe).",
+            "Giữ nguyên daily SRS nhưng ưu tiên thẻ từ lỗi error notebook và từ gặp khi đọc, giảm thẻ \"học vẹt từ list\".",
+            "Chuyển input lên mức khó hơn: graded reader level cao; nghe chậm có script → nghe tốc độ thật.",
+            "Giữ nói hằng tháng (research chỉ nói \"weekly, from month two\", không ấn định nhịp sau đó).",
+            "Khi gián đoạn: giảm tải 1 tuần rồi quay lại, không dồn nợ."
+          ],
+          "resources": [
+            {
+              "title": "Slow Chinese Podcast 慢速汉语 (Apple Podcasts)",
+              "url": "https://podcasts.apple.com/us/podcast/slow-chinese-podcast-%E6%85%A2%E9%80%9F%E6%B1%89%E8%AF%AD-learn-chinese-%E5%AD%A6%E4%B8%AD%E6%96%87/id1562798369",
+              "kind": "podcast",
+              "note": null
+            },
+            {
+              "title": "Mandarin Corner (web)",
+              "url": "https://mandarincorner.org/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "Mandarin Companion — homepage",
+              "url": "https://mandarincompanion.com/",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "DuChinese — homepage",
+              "url": "https://duchinese.net/",
+              "kind": "app",
+              "note": null
+            },
+            {
+              "title": "Anki FAQ — algorithm (SM-2/FSRS)",
+              "url": "https://faqs.ankiweb.net/what-spaced-repetition-algorithm.html",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "HSK Academy — HSK 4 word list",
+              "url": "https://www.hsk.academy/en/hsk_4",
+              "kind": "site",
+              "note": null
+            }
+          ]
+        },
+        {
+          "title": "Ghi chú HSK 3.0: mốc thời gian chỉ để tham khảo",
+          "why": "Timeline HSK 3.0 không làm mốc cứng cho lộ trình này (F6). Trong 2026, kỳ HSK 1–6 thường lệ vẫn theo HSK 2.0. Mọi mốc dưới đây: theo CTI 2026, kiểm lại trước khi đăng ký.",
+          "activities": [
+            "Tham khảo mốc: ra mắt chính thức toàn cầu 13/12/2026 — \"HSK 3.0 will be officially launched worldwide on December 13, 2026!\"",
+            "Tham khảo mốc: thử toàn cầu lần 2 ngày 20/09/2026 — \"定于 2026年9月20日 面向全球开展第二轮试行考试\".",
+            "Gap đã ghi: sách hướng dẫn công bố 11/2025 hiệu lực 7/2026 và thử toàn cầu lần 1 (31/01/2026) chỉ có tóm tắt, không có trích nguyên văn — cần đối chiếu lại văn bản CTI trước khi dùng.",
+            "Không trộn hai khung số liệu: bộ tài liệu này chạy HSK 2.0; khung HSK 3.0 (chữ mới theo cấp 246/125/284/441) chỉ để tham khảo.",
+            "Format đề HSK 3.0 chi tiết không trích được từ chinesetest.cn — gap."
+          ],
+          "resources": [
+            {
+              "title": "chinesetest.cn (admin) — ra mắt HSK 3.0 13/12/2026",
+              "url": "https://admin.chinesetest.cn/gonewcontent.do?id=51336883",
+              "kind": "site",
+              "note": "Theo CTI 2026, kiểm lại trước khi đăng ký (F6)."
+            },
+            {
+              "title": "chinesetest.cn — Thông báo (thử nghiệm HSK 3.0 20/09/2026)",
+              "url": "https://www.chinesetest.cn/notice",
+              "kind": "site",
+              "note": "Theo CTI 2026, kiểm lại trước khi đăng ký (F6)."
+            },
+            {
+              "title": "Beijing.gov — Registration opens for HSK 3.0",
+              "url": "https://english.beijing.gov.cn/studyinginbeijing/news/202512/t20251222_4355931.html",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "HSKStory — What is HSK 3.0 (trạng thái 2026)",
+              "url": "https://hskstory.com/guides/what-is-hsk-30",
+              "kind": "article",
+              "note": "Nguồn community."
+            },
+            {
+              "title": "HSKStory — Complete HSK 3.0 vocabulary list",
+              "url": "https://hskstory.com/guides/hsk-30-vocabulary-complete",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "MandarinZone — New HSK 3.0 changes (số chữ nhận diện/viết)",
+              "url": "https://www.mandarinzone.com/new-hsk-test",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "MandarinZone — New HSK 3 Vocabulary List 2026 PDF",
+              "url": "https://media.mandarinzone.com/hsk3-vocabulary-list-2026.pdf",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "HanziFeed — characters by HSK 3.0 level",
+              "url": "https://hanzifeed.com/characters",
+              "kind": "site",
+              "note": null
+            },
+            {
+              "title": "CLI — What is the HSK (3.0 counts)",
+              "url": "https://studycli.org/hsk/what-is-the-hsk",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "HSKMock — HSK 3.0 trial guide 20/09/2026",
+              "url": "https://hskmock.com/en/blog/335.html",
+              "kind": "article",
+              "note": null
+            },
+            {
+              "title": "FLTRP — New HSK Course (HSK 3.0 official series)",
+              "url": "https://www.fltrp.com/en/hsk",
+              "kind": "book",
+              "note": null
+            },
+            {
+              "title": "Steplearn — HSK 3.0 9-level guide (số từ bản nháp 2021)",
+              "url": "https://steplearnchinese.com/hsk-3",
+              "kind": "site",
+              "note": "Bản nháp 2021 — không dùng làm chuẩn."
+            }
+          ]
+        },
+        {
+          "title": "Lợi thế Hán-Việt: dùng có kiểm chứng, không dùng làm giả định",
+          "why": "Nhiều từ Hán–Việt trùng hình/khớp nghĩa với từ Trung giản thể có thể rút ngắn thời gian đoán nghĩa khi đọc. Đây là giả định dựa trên nhận thức chung, CHƯA được các file research kiểm chứng (gap) — lợi thế này chỉ hỗ trợ phần nhận nghĩa khi đọc, không thay thế học pinyin/thanh từ đầu.",
+          "activities": [
+            "Dùng Hán–Việt làm \"móc treo\" gợi nhớ nghĩa khi học từ mới, nhưng luôn ghép với pinyin + audio + câu mẫu.",
+            "Không suy nghĩa từ chữ Hán–Việt bằng cách \"đọc ngược\" khi chưa chắc âm.",
+            "Đối chiếu ranh giới: theo 1 nghiên cứu n=42 người Việt, 384 lỗi gồm thanh điệu 156 (40,6%) + thanh mẫu 132 (34,4%) + vận mẫu 96 (25,0%) → vẫn phải học pinyin/thanh như người khác.",
+            "Ghi lỗi vào error notebook, đối chiếu lại xem lợi thế có thật không thay vì tin vào giả định."
+          ],
+          "resources": [
+            {
+              "title": "ICA — Chuyển di tiêu cực, lỗi phát âm người Việt",
+              "url": "http://ica.org.vn/anh-huong-cua-chuyen-di-tieu-cuc-tu-tieng-me-de-den-phat-am-tieng-trung-cua-nguoi-hoc-viet-nam-bang-chung-tu-khao-sat-va-can-thiep-ngu-am/",
+              "kind": "article",
+              "note": "lỗi (000, kiểm 2026-09-23): không kết nối được — link timeout khi kiểm, tra lại bằng trình duyệt."
+            },
+            {
+              "title": "GitHub haidinhtuan/hsk-word-list (có tiếng Việt)",
+              "url": "https://github.com/haidinhtuan/hsk-word-list",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "CC-CEDICT — editor site",
+              "url": "https://cc-cedict.org/",
+              "kind": "tool",
+              "note": null
+            },
+            {
+              "title": "CEDICT (wiki tổng hợp, 2nd)",
+              "url": "https://informasilengkap.com/en/CEDICT",
+              "kind": "tool",
+              "note": "bot-block (403, kiểm 2026-09-23): site chặn bot, mở trình duyệt dùng bình thường — URL vẫn dùng được."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
