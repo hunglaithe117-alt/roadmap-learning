@@ -34,6 +34,7 @@
 package graphql_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -249,7 +250,10 @@ func wordStatusStrings() []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, c := range cases {
-		for _, tok := range domainpractice.WordDiff(c[0], c[1]) {
+		// ctx luôn Background nên err không bao giờ khác nil; bỏ qua để không
+		// phải đổi chữ ký helper đọc enum.
+		toks, _ := domainpractice.WordDiff(context.Background(), c[0], c[1])
+		for _, tok := range toks {
 			if !seen[string(tok.Status)] {
 				seen[string(tok.Status)] = true
 				out = append(out, string(tok.Status))

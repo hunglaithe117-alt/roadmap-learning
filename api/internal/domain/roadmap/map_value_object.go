@@ -5,32 +5,34 @@ import (
 	"strings"
 )
 
-// Terrain là loại địa hình của 1 bản đồ (stage). Whitelist hẹp 6 giá trị —
-// ROADMAP-MAP-IDEA §6 chốt "không cho user tự thêm ở v1" để layout còn
-// deterministic và test được. CHECK ở DB (migration 00004) là backstop, 2
-// nơi phải sửa cùng lúc.
+// Terrain represents the map terrain theme.
 type Terrain string
 
-// TerrainDefault là giá trị DEFAULT của cột `roadmap_stages.terrain` và cũng là
-// giá trị ComputeLayout rơi về khi gặp terrain rỗng/không hợp lệ.
+// TerrainDefault is the fallback terrain.
 const TerrainDefault Terrain = "meadow"
 
 const (
-	TerrainMeadow  Terrain = "meadow"  // đồng cỏ
-	TerrainDesert  Terrain = "desert"  // sa mạc
-	TerrainSnow    Terrain = "snow"    // tuyết
-	TerrainVolcano Terrain = "volcano" // núi lửa
-	TerrainOcean   Terrain = "ocean"   // biển
-	TerrainCity    Terrain = "city"    // thành phố
+	// TerrainMeadow represents meadow terrain.
+	TerrainMeadow Terrain = "meadow"
+	// TerrainDesert represents desert terrain.
+	TerrainDesert Terrain = "desert"
+	// TerrainSnow represents snow terrain.
+	TerrainSnow Terrain = "snow"
+	// TerrainVolcano represents volcano terrain.
+	TerrainVolcano Terrain = "volcano"
+	// TerrainOcean represents ocean terrain.
+	TerrainOcean Terrain = "ocean"
+	// TerrainCity represents city terrain.
+	TerrainCity Terrain = "city"
 )
 
-// AllTerrains là tập hợp hợp lệ, dùng cho validate và cho vòng lặp test.
+// AllTerrains lists valid terrain themes.
 var AllTerrains = []Terrain{
 	TerrainMeadow, TerrainDesert, TerrainSnow,
 	TerrainVolcano, TerrainOcean, TerrainCity,
 }
 
-// Valid báo terrain có thuộc whitelist 6 giá trị không.
+// Valid reports whether t is a supported Terrain.
 func (t Terrain) Valid() bool {
 	for _, v := range AllTerrains {
 		if v == t {
@@ -40,14 +42,9 @@ func (t Terrain) Valid() bool {
 	return false
 }
 
-// String là nhãn tiếng Việt cho thông báo lỗi.
+// String returns the terrain string representation.
 func (t Terrain) String() string { return string(t) }
 
-// terrainAmplitude là biên độ dao động (đơn vị viewBox) của đường đi theo
-// từng terrain — ROADMAP-MAP-IDEA §2 "hệ số dao động khác nhau theo terrain
-// (desert phẳng hơn, volcano gấp thêm)". Số ở đây là hằng số thiết kế, không
-// suy ra từ công thức: layout phải deterministic và đổi biên độ không được
-// làm đổi hình dạng bản đồ đã lưu.
 var terrainAmplitude = map[Terrain]float64{
 	TerrainMeadow:  40,
 	TerrainDesert:  25,
@@ -57,27 +54,49 @@ var terrainAmplitude = map[Terrain]float64{
 	TerrainCity:    20,
 }
 
-// Amplitude là biên độ dao động ngang của đường đi (đơn vị viewBox). Terrain
-// không hợp lệ trả 0 — caller nên đã gọi Valid trước, ComputeLayout tự rơi về
-// TerrainDefault.
+// Amplitude returns the relative wave amplitude weight for the terrain.
 func (t Terrain) Amplitude() float64 { return terrainAmplitude[t] }
 
-// Direction là chiều đi của bản đồ: `up` = node 0 ở dưới, node cuối ở trên;
-// `right` = node 0 bên trái, node cuối bên phải. CHECK ở DB khớp whitelist.
+const (
+	terrainWaveDepthMin = 0.85
+	terrainWaveDepthMax = 1.15
+)
+
+// WaveDepth calculates the normalized wave depth factor in [0.85, 1.15].
+func (t Terrain) WaveDepth() float64 {
+	w := t.Amplitude()
+	lo := terrainAmplitude[TerrainCity]
+	hi := terrainAmplitude[TerrainVolcano]
+	if hi <= lo {
+		return 1
+	}
+	frac := (w - lo) / (hi - lo)
+	if frac < 0 {
+		frac = 0
+	}
+	if frac > 1 {
+		frac = 1
+	}
+	return terrainWaveDepthMin + frac*(terrainWaveDepthMax-terrainWaveDepthMin)
+}
+
+// Direction represents the map layout flow direction.
 type Direction string
 
-// DirectionDefault là DEFAULT của cột `roadmap_stages.direction`.
+// DirectionDefault is the default direction.
 const DirectionDefault Direction = "up"
 
 const (
-	DirectionUp    Direction = "up"
+	// DirectionUp flows from bottom to top.
+	DirectionUp Direction = "up"
+	// DirectionRight flows from left to right.
 	DirectionRight Direction = "right"
 )
 
-// AllDirections là tập hợp hợp lệ (đóng băng 2 giá trị).
+// AllDirections lists valid map flow directions.
 var AllDirections = []Direction{DirectionUp, DirectionRight}
 
-// Valid báo direction có thuộc tập 2 hằng không.
+// Valid reports whether d is a supported Direction.
 func (d Direction) Valid() bool {
 	for _, v := range AllDirections {
 		if v == d {
@@ -87,15 +106,13 @@ func (d Direction) Valid() bool {
 	return false
 }
 
-// MapPoint là toạ độ node trong viewBox của bản đồ. X là ngang, Y là dọc —
-// cùng hệ toạ độ SVG để M6 render thẳng, không cần chuyển đổi.
+// MapPoint represents 2D coordinates in map viewBox.
 type MapPoint struct {
 	X float64
 	Y float64
 }
 
-// ParseTerrain chuyển input người dùng (form/JSON) thành Terrain, trả lỗi tiếng
-// Việt liệt kê đúng whitelist để client hiện được lựa chọn hợp lệ.
+// ParseTerrain parses raw terrain string into Terrain.
 func ParseTerrain(raw string) (Terrain, error) {
 	t := Terrain(strings.ToLower(strings.TrimSpace(raw)))
 	if t == "" {
@@ -107,7 +124,7 @@ func ParseTerrain(raw string) (Terrain, error) {
 	return t, nil
 }
 
-// ParseDirection giống ParseTerrain cho 2 chiều đi.
+// ParseDirection parses raw direction string into Direction.
 func ParseDirection(raw string) (Direction, error) {
 	d := Direction(strings.ToLower(strings.TrimSpace(raw)))
 	if d == "" {

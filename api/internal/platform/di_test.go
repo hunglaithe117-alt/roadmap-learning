@@ -22,7 +22,7 @@ func Test_wire_constructs_every_service_repository_and_seeder(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 
 	require.NotNil(t, c.SRS, "context srs chưa được lắp")
@@ -53,7 +53,7 @@ func Test_roadmap_can_read_deck_through_srs_port(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 	ctx := context.Background()
 
@@ -67,7 +67,7 @@ func Test_roadmap_can_read_deck_through_srs_port(t *testing.T) {
 	stage, err := c.Roadmap.CreateStage(ctx, "zh", stageInputWithDeck(deck.ID))
 	require.NoError(t, err)
 
-	view, err := c.Roadmap.GetPath(ctx, "zh")
+	view, err := c.Roadmap.PathTree(ctx, "zh")
 	require.NoError(t, err)
 	require.Len(t, view.Stages, 1)
 	require.NotNil(t, view.Stages[0].Deck)
@@ -85,7 +85,7 @@ func Test_content_import_hsk_writes_through_srs_adapter(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 	ctx := context.Background()
 
@@ -107,7 +107,7 @@ func Test_seed_is_idempotent_on_second_run(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 	ctx := context.Background()
 
@@ -130,7 +130,7 @@ func Test_services_still_work_when_seed_was_never_run(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 
 	paths, err := c.Roadmap.ListPaths(ctx())
@@ -141,7 +141,7 @@ func Test_services_still_work_when_seed_was_never_run(t *testing.T) {
 // `SQLDB` trả `*sql.DB` cho health handler mà transport KHÔNG import gorm.
 func Test_sql_db_is_available_for_pinger_interface(t *testing.T) {
 	db := platformtestdb.Open(t, context.Background())
-	c, err := platform.Wire(context.Background(), db, testLogger(), nil)
+	c, err := platform.Wire(db, testLogger(), nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = c.Audio.Close() })
 

@@ -505,12 +505,12 @@ func Test_chunk_uses_domain_split(t *testing.T) {
 func Test_get_strokes_returns_index_or_detail(t *testing.T) {
 	svc := newService(newFakeRepo(), newFakeDecks(), &fakeTone{}, fixedNow)
 
-	idx, detail, err := svc.GetStrokes(context.Background(), "HSK1", "")
+	idx, detail, err := svc.Strokes(context.Background(), "HSK1", "")
 	require.NoError(t, err)
 	assert.Empty(t, detail)
 	require.Len(t, idx, 1)
 
-	idx, detail, err = svc.GetStrokes(context.Background(), "HSK1", "人")
+	idx, detail, err = svc.Strokes(context.Background(), "HSK1", "人")
 	require.NoError(t, err)
 	assert.Empty(t, idx)
 	assert.Equal(t, 2, detail.StrokeCount)
@@ -518,7 +518,7 @@ func Test_get_strokes_returns_index_or_detail(t *testing.T) {
 
 	// Chữ có dữ liệu nhưng KHÁC level → 404 (client chỉ hỏi chữ của level
 	// đang xem).
-	_, _, err = svc.GetStrokes(context.Background(), "HSK2", "人")
+	_, _, err = svc.Strokes(context.Background(), "HSK2", "人")
 	require.Error(t, err)
 	var appErr *Error
 	require.ErrorAs(t, err, &appErr)
@@ -528,11 +528,11 @@ func Test_get_strokes_returns_index_or_detail(t *testing.T) {
 func Test_get_reader_articles_filters_by_level_and_id(t *testing.T) {
 	svc := newService(newFakeRepo(), newFakeDecks(), &fakeTone{}, fixedNow)
 
-	got, err := svc.GetReaderArticles(context.Background(), "HSK1", "")
+	got, err := svc.ReaderArticles(context.Background(), "HSK1", "")
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
-	got, err = svc.GetReaderArticles(context.Background(), "", "a1-1")
+	got, err = svc.ReaderArticles(context.Background(), "", "a1-1")
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, "My Morning", got[0].Title)

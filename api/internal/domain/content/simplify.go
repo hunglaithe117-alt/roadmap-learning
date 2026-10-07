@@ -4,10 +4,7 @@ import (
 	"strings"
 )
 
-// tradToSimp là bảng map phồn→giản tối thiểu, đồng bộ với
-// web/src/player/diff.ts. Sửa 1 bên phải mirror bên kia + test cả 2.
-// Bảng thuần Go, KHÔNG cgo: GOROOT máy này thiếu unicode/norm (xem
-// STACK-V2-PLAN §8).
+// tradToSimp maps traditional Chinese characters to simplified equivalents.
 var tradToSimp = map[rune]rune{
 	'國': '国', '語': '语', '學': '学', '習': '习', '漢': '汉', '麼': '么',
 	'嗎': '吗', '們': '们', '說': '说', '話': '话', '愛': '爱', '樂': '乐',
@@ -26,11 +23,7 @@ var tradToSimp = map[rune]rune{
 	'勵': '励', '慶': '庆',
 }
 
-// ToSimplified đổi chữ phồn sang giản theo bảng trên; ký tự ngoài bảng giữ
-// nguyên, đầu vào đã giản thì idempotent.
-//
-// Whisper trả chữ phồn (廣東話, 學習) trong khi deck/diff/UI dùng chữ giản —
-// không chuẩn hóa sẽ chấm sai oan dù đọc đúng.
+// ToSimplified converts traditional Chinese characters in s to simplified Chinese.
 func ToSimplified(s string) string {
 	if s == "" {
 		return s
@@ -49,8 +42,7 @@ func ToSimplified(s string) string {
 	return string(out)
 }
 
-// HasTraditional báo chuỗi còn chữ phồn cần chuẩn hóa — dùng để kiểm tra
-// bảng tradToSimp có đủ ký tự trong test data hay không.
+// HasTraditional reports whether s contains traditional Chinese characters in tradToSimp.
 func HasTraditional(s string) bool {
 	return strings.ContainsFunc(s, func(r rune) bool {
 		_, ok := tradToSimp[r]

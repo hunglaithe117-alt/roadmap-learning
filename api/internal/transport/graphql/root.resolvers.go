@@ -74,8 +74,7 @@ func (r *mutationResolver) RecordReview(ctx context.Context, input model.ReviewI
 	return &model.RecordReviewPayload{Ok: true, Review: reviewView(res)}, nil
 }
 
-// SetCardTone chỉ GHI tone đã chấm. Bước chấm là `content.gradeTone` — 2 use case
-// của 2 context, tách bạch để client có thể chấm thử mà không ghi (drill).
+// SetCardTone saves the graded tone for a card.
 func (r *mutationResolver) SetCardTone(ctx context.Context, id string, tone *string) (*model.SetCardTonePayload, error) {
 	c, err := r.SRS.SetCardTone(ctx, parseID(id), tone)
 	if err != nil {
@@ -122,9 +121,7 @@ func (r *mutationResolver) UpsertDictEntry(ctx context.Context, input model.Dict
 	}, nil
 }
 
-// SetTone là CHẤM rồi GHI trong 1 lần gọi: `content` chấm (bảng thang điệu),
-// `srs` ghi vào `cards.tone`. Đây là đường 1 bước cho client; `gradeTone` +
-// `setCardTone` là đường 2 bước cho UI muốn chấm thử trước khi lưu.
+// SetTone grades and saves tone evaluation for a card in one step.
 func (r *mutationResolver) SetTone(ctx context.Context, cardID string, tone string) (*model.SetTonePayload, error) {
 	written, err := r.Content.SetTone(ctx, parseID(cardID), tone)
 	if err != nil {
@@ -184,10 +181,6 @@ func (r *mutationResolver) DeletePath(ctx context.Context, slug string) (*model.
 
 // CreateStage is the resolver for the createStage field.
 func (r *mutationResolver) CreateStage(ctx context.Context, pathSlug string, input model.StageInput) (*model.CreateStagePayload, error) {
-	// terrain/direction KHÔNG gửi = để lấy DEFAULT của cột. `terrainText`
-	// trả "" cho MEADOW vì đó là DEFAULT — gửi "meadow" cho mọi stage sẽ thêm
-	// dữ liệu vô nghĩa vào lịch sử merge. Giá trị KHÔNG map được thì 400, không
-	// rơi về DEFAULT (xem `terrainText`).
 	terrain, err := terrainText(input.Terrain)
 	if err != nil {
 		return &model.CreateStagePayload{Ok: false, Error: toUserError(err)}, nil
@@ -222,9 +215,6 @@ func (r *mutationResolver) UpdateStage(ctx context.Context, id string, patch mod
 		Title: patch.Title, Goal: patch.Goal, Position: patch.Position,
 		DurationWeeks: patch.DurationWeeks, DeckID: parseIDPtr(patch.DeckID),
 	}
-	// `terrain`/`direction` nil = KHÔNG đụng; enum không có giá trị "unset"
-	// nên "không gửi" chính là nil của input. Giá trị gửi lên mà `switch` không
-	// map được ⇒ 400, KHÔNG rơi về DEFAULT (xem `terrainText`).
 	if patch.Terrain != nil {
 		v, err := terrainText(patch.Terrain)
 		if err != nil {
@@ -288,9 +278,6 @@ func (r *mutationResolver) UpdateTopic(ctx context.Context, id string, patch mod
 		IsOptional: patch.IsOptional, MapX: patch.MapX, MapY: patch.MapY,
 		ClearMap: patch.ClearMap != nil && *patch.ClearMap,
 	}
-	// `activities` là `[]string` không phải `[]string?` vì `*[]string` của
-	// application phân biệt "không gửi" với "gửi mảng rỗng" — cần giữ nguyên
-	// để `UpdateTopic` không coi patch không đổi activities là xoá sạch.
 	if patch.Activities != nil {
 		v := patch.Activities
 		p.Activities = &v
@@ -340,8 +327,6 @@ func (r *mutationResolver) CreateResource(ctx context.Context, topicID string, i
 func (r *mutationResolver) UpdateResource(ctx context.Context, id string, patch model.ResourcePatch) (*model.UpdateResourcePayload, error) {
 	p := roadmapapp.ResourcePatch{
 		Title: patch.Title, URL: patch.URL, Note: patch.Note, Position: patch.Position,
-		// `clearUrl` là `Boolean` có default false trong schema ⇒ model sinh ra
-		// `*bool`; `false` phải giữ nguyên nghĩa "không xoá link".
 		ClearURL: patch.ClearURL != nil && *patch.ClearURL,
 	}
 	if patch.Kind != nil {
@@ -398,15 +383,10 @@ func (r *mutationResolver) DeleteMilestone(ctx context.Context, id string) (*mod
 
 // CreateBookmark is the resolver for the createBookmark field.
 func (r *mutationResolver) CreateBookmark(ctx context.Context, input model.BookmarkInput) (*model.CreateBookmarkPayload, error) {
-	// `status` không gửi → `bookmarkStatusText(nil)` trả `""` → `ValidateBookmarkStatus("")`
-	// gán DEFAULT `to_read` ở tầng application. Không gán sẵn `TO_READ` ở đây
-	// được vì khi đó `nil` (không gửi) và giá trị lạ sẽ cùng đi qua 1 nhánh.
 	status, err := bookmarkStatusText(input.Status)
 	if err != nil {
 		return &model.CreateBookmarkPayload{Ok: false, Error: toUserError(err)}, nil
 	}
-	// `tags: null` và `tags: []` cho cùng kết quả ở CreateBookmark (mảng rỗng
-	// không giữ tag nào) — khác `updateBookmark`, xem chỗ đó.
 	b, err := r.Roadmap.CreateBookmark(ctx, roadmapapp.BookmarkInput{
 		Title: input.Title, URL: input.URL, Note: derefOr(input.Note, ""),
 		Tags: input.Tags, Status: status,
@@ -424,9 +404,6 @@ func (r *mutationResolver) UpdateBookmark(ctx context.Context, id string, patch 
 		Title: patch.Title, URL: patch.URL, Note: patch.Note,
 		ClearURL: patch.ClearURL != nil && *patch.ClearURL,
 	}
-	// `tags: []` và "không gửi tags" là 2 thứ khác nhau — client gửi mảng rỗng
-	// là muốn XOÁ hết tag, nên phải giữ con trỏ xuống tầng application (null
-	// trong JSON → `nil` ở đây, xem `UpdateTopic` với `activities`).
 	if patch.Tags != nil {
 		v := patch.Tags
 		patchIn.Tags = &v
@@ -449,9 +426,6 @@ func (r *mutationResolver) DeleteBookmark(ctx context.Context, id string) (*mode
 
 // SetBookmarkStatus is the resolver for the setBookmarkStatus field.
 func (r *mutationResolver) SetBookmarkStatus(ctx context.Context, id string, status model.BookmarkStatus) (*model.SetBookmarkStatusPayload, error) {
-	// `status` là tham số BẮT BUỘC (`BookmarkStatus!`) nên không có nhánh
-	// `nil` — nhưng `bookmarkStatusText` vẫn phải trả lỗi cho giá trị lạ
-	// thay vì rơi về `to_read`, xem lý do ở `convert.go`.
 	text, err := bookmarkStatusText(&status)
 	if err != nil {
 		return &model.SetBookmarkStatusPayload{Ok: false, Error: toUserError(err)}, nil
@@ -494,15 +468,8 @@ func (r *mutationResolver) MarkErrorResolved(ctx context.Context, errorID string
 	return &model.MarkErrorResolvedPayload{Ok: true, NoteID: idOf(noteID)}, nil
 }
 
-// Sync là mutation DUY NHẤT không theo mẫu payload `ok` + `error` — nó trả
-// thẳng `MergeResult` vốn ĐÃ có sẵn cả `ok` lẫn `error` trong schema, vì
-// `application/sync.MergeResult` mang `Warnings` + `Conflicts` mà client cần
-// đọc cả khi merge LỖI (conflict phát sinh rồi rollback thì client vẫn phải
-// biết). Bọc thêm 1 payload sẽ phải nhân bản 4 field.
+// Sync executes database synchronization and returns merge results directly.
 func (r *mutationResolver) Sync(ctx context.Context) (*model.MergeResult, error) {
-	// `r.Sync` là chính method này (mutationResolver có method `Sync`), nên
-	// phải chỉ định `r.Resolver` để với tới service. Ghi rõ ở đây vì
-	// `r.Sync.Sync(ctx)` nghe rất hợp lý rồi fail khi biên dịch.
 	res, err := r.Resolver.Sync.Sync(ctx)
 	return mergeResultView(res, err), nil
 }
@@ -520,9 +487,7 @@ func (r *queryResolver) Decks(ctx context.Context) ([]model.Deck, error) {
 	return out, nil
 }
 
-// Deck trả null (không phải lỗi) khi id không tồn tại: `deck(id:)` với id
-// client tự dán là tình huống bình thường, và ép 404 ở đây biến câu hỏi
-// thành lỗi cho 1 UI chỉ cần biết "không có".
+// Deck returns a deck by ID or nil if not found.
 func (r *queryResolver) Deck(ctx context.Context, id string) (*model.Deck, error) {
 	rows, err := r.SRS.ListDecks(ctx)
 	if err != nil {
@@ -582,9 +547,7 @@ func (r *queryResolver) EnglishSearch(ctx context.Context, q string, limit *int)
 	return enViews(rows), nil
 }
 
-// Stress trả kết quả luôn (kể cả khi từ không có trong dict) vì
-// `LookupStress` có nhánn fallback quy tắc hậu tố — "không biết" là 1 kết quả
-// hợp lệ, không phải lỗi. `fromDict = false` là thứ client dùng để gắn nhãn.
+// Stress returns stress pattern and pronunciation data for a word.
 func (r *queryResolver) Stress(ctx context.Context, word string) (*model.StressLookup, error) {
 	res, err := r.Content.LookupStress(ctx, word)
 	if err != nil {
@@ -606,13 +569,11 @@ func (r *queryResolver) Strokes(ctx context.Context, level string, hanzi *string
 	if hanzi != nil {
 		h = *hanzi
 	}
-	index, info, err := r.Content.GetStrokes(ctx, level, h)
+	index, info, err := r.Content.Strokes(ctx, level, h)
 	if err != nil {
 		return &model.StrokePayload{Ok: false, Error: toUserError(err)}, nil
 	}
 	out := &model.StrokePayload{Ok: true, Index: strokeIndexViews(index)}
-	// `info` zero khi `hanzi` rỗng (chỉ xin index) hoặc khi chữ không có dữ
-	// liệu — use case đã trả 404 trong trường hợp sau.
 	if info.Hanzi != "" {
 		out.Info = strokeInfoView(info)
 	}
@@ -666,7 +627,7 @@ func (r *queryResolver) ThieuSessions(ctx context.Context) ([]model.ThieuSession
 
 // ReaderArticles is the resolver for the readerArticles field.
 func (r *queryResolver) ReaderArticles(ctx context.Context, level *string, id *string) ([]model.ReaderArticle, error) {
-	rows, err := r.Content.GetReaderArticles(ctx, derefOr(level, ""), derefOr(id, ""))
+	rows, err := r.Content.ReaderArticles(ctx, derefOr(level, ""), derefOr(id, ""))
 	if err != nil {
 		return nil, err
 	}
@@ -687,8 +648,7 @@ func (r *queryResolver) Paths(ctx context.Context) ([]model.PathSummary, error) 
 	return out, nil
 }
 
-// Path trả null khi slug không tồn tại. 404 chỉ dành cho mutation: query trả
-// null là câu trả lời hợp lệ, còn mutation hỏng là hành động hỏng.
+// Path returns a roadmap path by slug or nil if not found.
 func (r *queryResolver) Path(ctx context.Context, slug string) (*model.Path, error) {
 	p, err := r.Roadmap.PathBySlug(ctx, slug)
 	if err != nil {
@@ -711,9 +671,7 @@ func (r *queryResolver) PathProgress(ctx context.Context, slug string, since *st
 	return &model.PathProgressPayload{Ok: true, Progress: progressView(prog)}, nil
 }
 
-// Stage/Topic/Resource/Milestone trả null khi id không tồn tại — xem `Path`.
-// Cả 4 đi qua use case `…ByID` của application (M4 thêm), KHÔNG dựng cả cây rồi
-// lọc: dựng cây để lấy 1 node là O(cây) I/O cho 1 việc O(1).
+// Stage returns a stage by ID or nil if not found.
 func (r *queryResolver) Stage(ctx context.Context, id string) (*model.Stage, error) {
 	st, err := r.Roadmap.StageByID(ctx, parseID(id))
 	if err != nil {
@@ -723,10 +681,7 @@ func (r *queryResolver) Stage(ctx context.Context, id string) (*model.Stage, err
 	return &out, nil
 }
 
-// Topic đi qua `TopicByID` của application, vốn đã trả kèm layout + LevelState
-// của CẢ stage. Resolver ghi luôn layout vào bảng bên cạnh của loader để
-// `Topic.level` / `Topic.point` đọc lại được mà không query thêm — cùng cơ chế
-// với `Stage.topics` (xem `Loaders.topicMeta`).
+// Topic returns a topic by ID or nil if not found.
 func (r *queryResolver) Topic(ctx context.Context, id string) (*model.Topic, error) {
 	tv, err := r.Roadmap.TopicByID(ctx, parseID(id))
 	if err != nil {
@@ -757,8 +712,7 @@ func (r *queryResolver) Milestone(ctx context.Context, id string) (*model.Milest
 	return &out, nil
 }
 
-// Bookmark trả null (không phải lỗi) khi id không tồn tại — cùng lý do với
-// `deck(id:)`: client tự dán id là tình huống bình thường.
+// Bookmark returns a bookmark by ID or nil if not found.
 func (r *queryResolver) Bookmark(ctx context.Context, id string) (*model.Bookmark, error) {
 	b, err := r.Roadmap.BookmarkByID(ctx, parseID(id))
 	if err != nil {
@@ -768,18 +722,10 @@ func (r *queryResolver) Bookmark(ctx context.Context, id string) (*model.Bookmar
 	return &out, nil
 }
 
-// Bookmarks trả kho link theo bộ lọc. `status`/`tag` rỗng = không lọc.
-//
-// KHÔNG bọc payload `ok`+`error` như `Query.stats`: lọc sai không thể xảy ra
-// từ GraphQL — `status` là enum nên gqlgen tự chặn giá trị lạ, còn `tag` chỉ có
-// 1 quy tắc là quá dài. Lỗi còn lại là lỗi hệ thống, và trả null + error
-// GraphQL là đúng (giống `Query.paths`).
+// Bookmarks returns bookmarks matching filters.
 func (r *queryResolver) Bookmarks(ctx context.Context, status *model.BookmarkStatus, tag *string) ([]model.Bookmark, error) {
 	filter := roadmapapp.BookmarkFilter{Tag: derefOr(tag, "")}
 	if status != nil {
-		// `TO_READ` phải ghi tường minh `"to_read"` chứ không rút về `""`:
-		// `""` ở `BookmarkFilter` nghĩa là KHÔNG lọc, nên gộp 2 thứ đó thì
-		// lọc `status: TO_READ` trả về toàn bộ kho link — sai lặng.
 		text, err := bookmarkStatusText(status)
 		if err != nil {
 			return nil, err
@@ -799,7 +745,7 @@ func (r *queryResolver) Bookmarks(ctx context.Context, status *model.BookmarkSta
 
 // ShadowProgress is the resolver for the shadowProgress field.
 func (r *queryResolver) ShadowProgress(ctx context.Context, cardID string) (*model.ShadowProgress, error) {
-	p, err := r.Practice.GetShadowProgress(ctx, parseID(cardID))
+	p, err := r.Practice.LoadShadowProgress(ctx, parseID(cardID))
 	if err != nil {
 		return nil, err
 	}
@@ -841,7 +787,7 @@ func (r *queryResolver) ErrorSuggestions(ctx context.Context, limit *int) ([]mod
 
 // Diff is the resolver for the diff field.
 func (r *queryResolver) Diff(ctx context.Context, sample string, transcript string) (*model.DiffPayload, error) {
-	res, err := r.Practice.DiffAgainstSample(sample, transcript)
+	res, err := r.Practice.DiffAgainstSample(ctx, sample, transcript)
 	if err != nil {
 		return &model.DiffPayload{Ok: false, Error: toUserError(err)}, nil
 	}
@@ -857,9 +803,7 @@ func (r *queryResolver) Stats(ctx context.Context, rangeArg *string) (*model.Sta
 	return &model.StatsPayload{Ok: true, Stats: statsView(s)}, nil
 }
 
-// Streak không nhận tham số `now`: client không được chọn mốc. `ComputeStreak`
-// nhận `now` để test được, nhưng nếu lộ ra ngoài thì 1 máy lệch giờ sẽ tự
-// báo streak ảo. Mốc luôn là UTC hôm nay của server.
+// Streak returns the current learning streak in days calculated from UTC now.
 func (r *queryResolver) Streak(ctx context.Context) (int, error) {
 	return r.Insight.ComputeStreak(ctx, nowUTC())
 }

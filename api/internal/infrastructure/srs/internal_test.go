@@ -1,7 +1,7 @@
 package srsinfra
 
 // Test nội bộ của package (không phải `srsinfra_test`) vì cần nắm được
-// `txHandle` để đọc lại TRONG transaction — mà đọc ngoài transaction thì thấy
+// `txOf` để đọc lại TRONG transaction — mà đọc ngoài transaction thì thấy
 // dữ liệu CŨ, tức là chính cái bug P0 mà test này chặn.
 
 import (
@@ -88,7 +88,7 @@ func Test_update_card_readback_inside_transaction_sees_new_values(t *testing.T) 
 		t.Fatalf("UnitOfWork.Do: %v", err)
 	}
 	if inTxTone != "ní" {
-		t.Errorf("trong transaction phải thấy %q, got %q", "ní", inTxTone)
+		t.Errorf("trong transaction: got %q, want %q", inTxTone, "ní")
 	}
 }
 
@@ -107,9 +107,8 @@ func Test_tx_of_rejects_foreign_handle(t *testing.T) {
 	if _, err := txOf(db, struct{ ID int }{1}); err == nil {
 		t.Error("tx handle sai kiểu phải trả lỗi, không được rơi về pool")
 	}
-	if _, err := txOf(db, txHandle{}); err == nil {
-		t.Error("txHandle rỗng (tx = nil bên trong) phải trả lỗi")
-	}
+	// Nhánh "handle đúng kiểu nhưng tx bên trong nil" không dựng được từ đây
+	// sau khi gom về `txtx`: test nội bộ của package `txtx` chốt nhánh đó.
 }
 
 // Test_wrong_tx_handle_writes_nothing là F2 ở mức DB: truyền handle tùy ý cho

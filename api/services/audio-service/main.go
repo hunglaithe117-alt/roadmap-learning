@@ -1,16 +1,4 @@
-// Command audio-service là tiến trình RIÊNG xử lý TTS + STT cho app chính.
-//
-// Vì sao tách process: Piper là binary Python (~752MB model + runtime), Whisper
-// là sidecar 8GB. Ở v1 chúng nằm trong main image / sidecar compose và app gọi
-// bằng `os/exec` + HTTP client. M4 gom cả hai về sau 1 ranh giới gRPC duy nhất
-// (`proto/audio/v1/audio.proto`) để app không còn phụ thuộc đường dẫn file
-// tạm, không còn parse JSON của Whisper, và có healthcheck + timeout rõ ràng.
-//
-// Cấu hình qua env:
-//   - PIPER_BIN, PIPER_MODEL_ZH, PIPER_MODEL_EN — TTS (rỗng = stub sine)
-//   - WHISPER_URL                             — STT (rỗng = stub transcript)
-//   - AUDIO_GRPC_ADDR                         — địa chỉ lắng nghe, mặc định :9090
-//   - LOG_LEVEL                               — slog level
+// Command audio-service provides gRPC TTS and STT services.
 package main
 
 import (
@@ -37,7 +25,7 @@ import (
 func main() {
 	log := newLogger(os.Getenv("LOG_LEVEL"))
 	if err := run(log); err != nil {
-		log.Error("audio-service dừng vì lỗi", slog.String("err", err.Error()))
+		log.Error("audio-service stopped with error", slog.String("err", err.Error()))
 		os.Exit(1)
 	}
 }
@@ -45,9 +33,6 @@ func main() {
 func run(log *slog.Logger) error {
 	addr := envOr("AUDIO_GRPC_ADDR", ":9090")
 
-	// TTS + STT dựng 1 lần, trước khi listen: nếu cấu hình sai (ví dụ
-	// PIPER_BIN trỏ vào file không tồn tại) thì fail NGAY lúc boot thay vì
-	// nhận request rồi mới trả 502 cho từng request.
 	synth, err := newSynthesizerFromEnv(log)
 	if err != nil {
 		return err
@@ -75,7 +60,7 @@ func run(log *slog.Logger) error {
 
 	group, groupCtx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		log.Info("audio-service lắng nghe", slog.String("addr", addr),
+		log.Info("audio-service listening", slog.String("addr", addr),
 			slog.String("tts", synth.Name()), slog.String("stt", transcriber.Name()))
 		if err := srv.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			return err
@@ -84,9 +69,6 @@ func run(log *slog.Logger) error {
 	})
 	group.Go(func() error {
 		<-groupCtx.Done()
-		// `GracefulStop` chờ các RPC đang chạy xong; `Stop` cắt ngang. Chọn
-		// graceful trước, ngắt sau `shutdownGrace` để 1 Whisper call chậm
-		// không treo cả container.
 		done := make(chan struct{})
 		go func() { srv.GracefulStop(); close(done) }()
 		select {
@@ -99,14 +81,10 @@ func run(log *slog.Logger) error {
 	return group.Wait()
 }
 
-// errEmptyAudio là lỗi nghiệp vụ duy nhất của service: audio 0 byte thì không
-// có gì để nhận dạng. App map sang 400 (input sai) chứ không 502 — service
-// trả `codes.InvalidArgument` để app đọc được mã.
-var errEmptyAudio = status.Error(codes.InvalidArgument, "audio rỗng")
+// ErrEmptyAudio indicates the provided audio payload is empty.
+var ErrEmptyAudio = status.Error(codes.InvalidArgument, "empty audio")
 
-// shutdownGrace là khoảng chờ cho RPC đang chạy khi nhận SIGTERM, trước khi
-// cắt ngang. 1 call Whisper có thể mất tới sttTimeout nên không thể đợi vô
-// hạn — `docker compose stop` phải không treo.
+// shutdownGrace limits waiting time for in-flight RPCs during server termination.
 const shutdownGrace = 10 * time.Second
 
 func envOr(key, def string) string {

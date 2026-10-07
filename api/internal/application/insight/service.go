@@ -8,13 +8,13 @@ import (
 	domain "langapp/internal/domain/insight"
 )
 
-// Service là use case của context insight (dashboard + báo cáo tiến độ).
+// Service handles dashboard analytics and progress reporting.
 type Service struct {
 	repo Repository
 	now  NowFunc
 }
 
-// NewService dựng service. nowFn nil → UTC thật.
+// NewService constructs an insight service.
 func NewService(repo Repository, nowFn NowFunc) *Service {
 	if nowFn == nil {
 		nowFn = Clock
@@ -22,9 +22,7 @@ func NewService(repo Repository, nowFn NowFunc) *Service {
 	return &Service{repo: repo, now: nowFn}
 }
 
-// Stats là payload dashboard. `Done`/`Total` là alias deprecated của
-// `DoneWindow`/`TotalAll` — giữ lại vì app v1 trả cả 2 và UI cũ đang đọc tên
-// cũ (hợp đồng đóng băng ở D5 v1).
+// Stats represents dashboard review and card statistics.
 type Stats struct {
 	Range      string
 	Days       int
@@ -35,22 +33,13 @@ type Stats struct {
 	DueNow     int
 	Accuracy   float64
 	Streak     int
-	// Timezone luôn là "UTC" (xem `Clock`).
-	Timezone string
+	Timezone   string
 }
 
-// StreakScanLimit là số ngày đọc để tính streak — giữ nguyên LIMIT 400 của v1.
+// StreakScanLimit is the maximum number of review days scanned for streak calculation.
 const StreakScanLimit = 400
 
-// Stats trả số liệu dashboard cho cửa sổ `range` (week = 7 ngày, month = 30
-// ngày; rỗng = week).
-//
-// Cần nói rõ 2 con số dễ nhầm:
-//   - `DoneWindow` = số review trong CỬA SỔ (đã ôn bao nhiêu).
-//   - `TotalAll` = tổng số thẻ hiện có, KHÔNG theo cửa sổ (kho học liệu).
-//   - `DueNow` = số thẻ đã tới hạn. Hàng đợi ôn (`srs.DueCards`) còn kéo thêm
-//     thẻ chưa từng ôn (`state = 'new'`), nên `DueNow` ≤ số thẻ player hiện;
-//     đó là hành vi v1 và UI vẫn hiện "x/y" bằng 2 số khác nhau.
+// Stats computes dashboard statistics for the specified range ("week" or "month").
 func (s *Service) Stats(ctx context.Context, rangeName string) (Stats, error) {
 	r := domain.Range(rangeName)
 	if rangeName == "" {
@@ -90,12 +79,7 @@ func (s *Service) Stats(ctx context.Context, rangeName string) (Stats, error) {
 	}, nil
 }
 
-// ComputeStreak đếm số ngày UTC LIÊN TIẾP có ít nhất 1 review, tính tới hôm
-// nay.
-//
-// Hôm nay chưa học nhưng hôm qua có thì streak GIỮ NGUYÊN (không về 0 sớm
-// trong ngày) — đó là hành vi v1 và là điều user mong đợi lúc 8h sáng. Quy
-// tắc nằm ở `domain/insight.ComputeStreak`.
+// ComputeStreak computes consecutive review days up to now in UTC.
 func (s *Service) ComputeStreak(ctx context.Context, now time.Time) (int, error) {
 	list, err := s.repo.ReviewDays(ctx, StreakScanLimit)
 	if err != nil {
@@ -108,25 +92,15 @@ func (s *Service) ComputeStreak(ctx context.Context, now time.Time) (int, error)
 	return domain.ComputeStreak(days, now), nil
 }
 
-// TopError là 1 từ bị đọc sai kèm số lần.
-//
-// `CardID`/`Front` phục vụ yêu cầu "bấm lỗi → nhảy review card" (T5.2): client
-// chỉ biết `word` thì không có gì để mở. Cả hai NULLABLE và luôn đi cùng nhau
-// — lỗi luyện nói tự do không gắn thẻ nào, và thẻ đã xoá mềm thì không mở
-// được. `CardID` cũng null khi cùng 1 từ sai ở nhiều thẻ: ta chỉ chọn thẻ của
-// lần sai MỚI NHẤT, và nếu lần đó không gắn thẻ thì để null thay vì trỏ thẻ
-// cũ — UI phải chịu được việc bấm không có gì để bấm.
+// TopError represents a frequently missed word.
 type TopError struct {
-	Word  string
-	Count int
-	// CardID nil = không nhảy review được, xem comment trên.
+	Word   string
+	Count  int
 	CardID *int64
 	Front  string
 }
 
-// TopErrors trả các từ sai nhiều nhất trong sổ lỗi. Quy tắc đếm + tie-break +
-// chọn thẻ đại diện nằm ở `domain/insight.TopError` (tầng này chỉ truy vấn
-// rồi chuyển).
+// TopErrors aggregates the most frequent errors from the error log.
 func (s *Service) TopErrors(ctx context.Context, limit int) ([]TopError, error) {
 	raw, err := s.repo.ListErrorNotes(ctx, scanLimit(limit))
 	if err != nil {
@@ -152,13 +126,8 @@ func (s *Service) TopErrors(ctx context.Context, limit int) ([]TopError, error) 
 	return out, nil
 }
 
-// topErrorScanLimit là số note lỗi đọc để đếm (giữ nguyên hằng 500 của v1:
-// đếm trên toàn bộ lịch sử thì số lần mới đúng, single-user thì 500 note là
-// mốc hợp lý).
 const topErrorScanLimit = 500
 
-// scanLimit quyết định số note cần quét: luôn đủ 500 để đếm chính xác, dù
-// client chỉ xin `limit` kết quả.
 func scanLimit(limit int) int {
 	if limit <= 0 {
 		return 10
@@ -166,21 +135,13 @@ func scanLimit(limit int) int {
 	return topErrorScanLimit
 }
 
-// ProgressResult là tiến độ roadmap trong 1 khoảng thời gian.
+// ProgressResult holds the number of completed roadmap topics since a date.
 type ProgressResult struct {
-	// Since là mốc bắt đầu (YYYY-MM-DD), chuẩn hoá từ đầu vào.
-	Since string
-	// Completed là số node `roadmap_topics` đánh dấu xong trong khoảng.
+	Since     string
 	Completed int
 }
 
-// ProgressOverRange đếm node roadmap hoàn thành từ ngày `since` trở đi, phục
-// vụ biểu đồ tiến độ theo tuần/tháng (amendment A1).
-//
-// `completed_at` được set khi chuyển sang `done` và CLEAR khi rời `done`
-// (quy tắc của domain/roadmap.SetStatus). Nên con số này là "số node đang ở
-// trạng thái xong tính từ `since`", KHÔNG phải "số node đã hoàn thành rồi bỏ
-// sau" — cùng hệ nghĩa với `GET /api/roadmap/progress?since=` của v1.
+// ProgressOverRange counts completed roadmap topics since date string (YYYY-MM-DD).
 func (s *Service) ProgressOverRange(ctx context.Context, since string) (ProgressResult, error) {
 	day, err := time.Parse("2006-01-02", since)
 	if err != nil {

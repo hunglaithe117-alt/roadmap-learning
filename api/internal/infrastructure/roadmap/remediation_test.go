@@ -199,8 +199,12 @@ func Test_clear_map_writes_sql_null_not_zero(t *testing.T) {
 	ctx := context.Background()
 	_, stage, _ := buildTree(t, svc)
 
+	// Toạ độ đặt tay phải nằm trong biên canvas — dùng HẰNG SỐ domain thay vì
+	// con số cứng 1999.5 của viewBox 1000×2000 cũ (trục phụ nay cao 900).
 	tp, err := svc.CreateTopic(ctx, stage.ID, roadmapapp.TopicInput{
-		Title: "Node đặt tay", MapX: f64p(120.5), MapY: f64p(1999.5),
+		Title: "Node đặt tay",
+		MapX:  f64p(domain.MapViewWidth / 2),
+		MapY:  f64p(domain.MapViewHeight / 2),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, tp.MapX)
@@ -220,7 +224,7 @@ func Test_clear_map_writes_sql_null_not_zero(t *testing.T) {
 	assert.Nil(t, row.MapX, "ClearMap phải ghi SQL NULL, không phải 0")
 	assert.Nil(t, row.MapY)
 
-	view, err := svc.GetPath(ctx, zhPathSlug)
+	view, err := svc.PathTree(ctx, zhPathSlug)
 	require.NoError(t, err)
 	for _, st := range view.Stages {
 		for _, tv := range st.Topics {
@@ -299,7 +303,7 @@ func Test_get_path_joins_layout_by_id_when_rows_arrive_shuffled(t *testing.T) {
 	path, stage, _ := buildTree(t, svcBase)
 
 	// Baseline: thứ tự chuẩn.
-	want, err := svcBase.GetPath(ctx, path.Slug)
+	want, err := svcBase.PathTree(ctx, path.Slug)
 	require.NoError(t, err)
 	require.Len(t, want.Stages, 1)
 	require.Len(t, want.Stages[0].Topics, 3)
@@ -309,7 +313,7 @@ func Test_get_path_joins_layout_by_id_when_rows_arrive_shuffled(t *testing.T) {
 	shuffled := &shuffledTopicsRepo{Repository: base, reversed: true}
 	svc := roadmapapp.NewService(shuffled, roadmapinfra.NewUnitOfWork(db), nil,
 		func() time.Time { return fixedNow }, roadmapapp.ViewBox{})
-	got, err := svc.GetPath(ctx, path.Slug)
+	got, err := svc.PathTree(ctx, path.Slug)
 	require.NoError(t, err)
 	require.Len(t, got.Stages, 1)
 	require.Len(t, got.Stages[0].Topics, 3)

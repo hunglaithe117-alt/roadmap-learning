@@ -31,7 +31,7 @@ enum ErrorCode {
   BAD_REQUEST
   NOT_FOUND
   CONFLICT
-  """Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ `mutation.sync` khi chưa cấu hình nguồn snapshot peer, `/api/backup` trước khi có `pg_dump`. Thêm hằng thứ 5 mà quên `codeForStatus` sẽ rơi về INTERNAL và che message tiếng Việt."""
+  """Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ `mutation.sync` khi chưa cấu hình nguồn snapshot peer. Thêm hằng thứ 5 mà quên `codeForStatus` sẽ rơi về INTERNAL và che message tiếng Việt."""
   NOT_IMPLEMENTED
   INTERNAL
 }

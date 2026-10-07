@@ -1,23 +1,24 @@
-// Package insight là bounded context BÁO CÁO: không sở hữu bảng nào, chỉ
-// đọc và tổng hợp từ srs + roadmap + practice. Vì vậy mọi hàm ở đây nhận
-// dữ liệu đã truy vấn sẵn, không có I/O.
+// Package insight provides reporting and statistics aggregated across domains.
 package insight
 
 import (
 	"sort"
 	"time"
+
+	srs "langapp/internal/domain/srs"
 )
 
-// Range là cửa sổ thống kê. Week = 7 ngày, Month = 30 ngày (hợp đồng đóng
-// băng với query param `?range=`).
+// Range defines a reporting time window.
 type Range string
 
 const (
-	RangeWeek  Range = "week"
+	// RangeWeek defines a 7-day reporting window.
+	RangeWeek Range = "week"
+	// RangeMonth defines a 30-day reporting window.
 	RangeMonth Range = "month"
 )
 
-// Days là độ dài cửa sổ của range.
+// Days returns the window duration in days and whether the range is valid.
 func (r Range) Days() (int, bool) {
 	switch r {
 	case RangeWeek, "":
@@ -29,39 +30,31 @@ func (r Range) Days() (int, bool) {
 	}
 }
 
-// Valid báo range có được API chấp nhận không. Rỗng = mặc định week.
+// Valid reports whether the range value is supported.
 func (r Range) Valid() bool {
 	_, ok := r.Days()
 	return ok
 }
 
-// Stats là payload dashboard.
+// Stats holds aggregate dashboard statistics.
 type Stats struct {
-	Range Range
-	Days  int
-	// Done là số review trong cửa sổ; Total là tổng thẻ hiện có (mọi deck,
-	// không theo cửa sổ). V1 gọi 2 số này là done_window/total_all và giữ
-	// done/total làm alias — ở đây dùng tên đầy đủ cho khỏi mơ hồ.
+	Range      Range
+	Days       int
 	DoneWindow int
 	TotalAll   int
 	DueNow     int
 	Accuracy   float64
 	Streak     int
-	// Timezone luôn là "UTC": server chuẩn hóa mọi mốc thời gian sang UTC,
-	// client tự hiển thị theo giờ địa phương.
-	Timezone string
+	Timezone   string
 }
 
-// ReviewCount là tổng hợp số review + số review được chấm >= 3 trong cửa sổ.
+// ReviewCount aggregates total and successful review counts within a time window.
 type ReviewCount struct {
 	Total int
-	// Good là số lần chấm Good (grade >= 3) — mẫu số của Accuracy.
-	Good int
+	Good  int
 }
 
-// ComputeAccuracy là tỉ lệ review đạt (grade >= 3). Không có review -> 0,
-// không phải NaN. Cửa sổ rỗng (Total = 0) vẫn cho 0 để client hiện "—"
-// từ chính Total.
+// ComputeAccuracy calculates the ratio of successful reviews (grade >= 3).
 func ComputeAccuracy(rc ReviewCount) float64 {
 	if rc.Total <= 0 {
 		return 0
@@ -69,24 +62,12 @@ func ComputeAccuracy(rc ReviewCount) float64 {
 	return float64(rc.Good) / float64(rc.Total)
 }
 
-// DueNow là số thẻ đến hạn: đã tới hạn HOẶC chưa từng ôn (state='new'),
-// đã bỏ qua thẻ xóa mềm. Đây là điều kiện hẹn giờ, KHÔNG phải truy vấn —
-// áp dụng cho từng thẻ đã đọc sẵn.
+// DueNow reports whether a card is currently due for review.
 func DueNow(cardDueAt time.Time, state string, deleted int, now time.Time) bool {
-	if deleted != 0 {
-		return false
-	}
-	if state == "new" {
-		return true
-	}
-	return !cardDueAt.After(now)
+	return srs.DueNow(cardDueAt, state, deleted, now)
 }
 
-// ComputeStreak là số ngày UTC LIÊN TIẾP có ít nhất 1 review, tính tới hôm
-// nay; hôm nay chưa học nhưng hôm qua có thì streak giữ nguyên (không về 0
-// sớm trong ngày). Ngày không có review nào -> 0.
-//
-// days là tập ngày UTC đã review, định dạng "2006-01-02".
+// ComputeStreak calculates consecutive UTC review days leading up to today.
 func ComputeStreak(days map[string]bool, now time.Time) int {
 	cursor := now.UTC().Truncate(24 * time.Hour)
 	key := cursor.Format("2006-01-02")
@@ -106,26 +87,14 @@ func ComputeStreak(days map[string]bool, now time.Time) int {
 	return streak
 }
 
-// ErrorCount là 1 từ bị đọc sai, kèm số lần.
+// ErrorCount associates an erroneous word with its occurrence count and representative card ID.
 type ErrorCount struct {
-	Word  string
-	Count int
-	// CardID là thẻ đại diện cho từ này — thẻ của lần sai MỚI NHẤT mà từ xuất
-	// hiện, để UI bấm "lỗi này → nhảy review". nil khi không lần sai nào của từ
-	// này gắn thẻ (luyện nói tự do) — xem `ErrorEntry.CardID`.
+	Word   string
+	Count  int
 	CardID *int64
 }
 
-// TopError đếm từ sai nhiều nhất. Tie-break theo chữ cái tăng dần để thứ tự
-// ổn định giữa 2 lần gọi (UI không nhảy vị trí khi refresh).
-// limit <= 0 trả về rỗng.
-//
-// `CardID` của mỗi từ là thẻ của lần sai MỚI NHẤT gắn thẻ: caller truyền
-// `entries` theo thứ tự note id GIẢM DẦN (mới trước) — cùng thứ tự mà
-// `Repository.ListErrorNotes` đọc — và ta lấy `CardID` đầu tiên khác nil.
-// `entries` không giữ mốc thời gian nên "mới nhất" chính là "đầu tiên", và điều
-// này phải được nói ở interface vì caller truyền sai thứ tự thì từ đó trỏ
-// thẻ cũ — sai mà không có lỗi nào báo.
+// TopError aggregates and ranks the most frequent error words.
 func TopError(entries []ErrorEntry, limit int) []ErrorCount {
 	if limit <= 0 {
 		return nil
@@ -160,20 +129,13 @@ func TopError(entries []ErrorEntry, limit int) []ErrorCount {
 	return out
 }
 
-// ErrorEntry là lỗi luyện nói đã đọc từ sổ lỗi — khai báo cục bộ để `insight`
-// không import `practice` (2 context độc lập; chỉ gặp nhau ở
-// application/ports.go).
-//
-// `CardID` là `notes.card_id` của note ghi lỗi — cột đã có sẵn ở `notes` và
-// `practice.AppendError` đã ghi khi client gửi `cardId`. Mảng `wrong` chỉ
-// lưu TỪ, nên thẻ phải đi kèm ở cấp note chứ không ở từng phần tử: 1 note có
-// nhiều từ sai nhưng tất cả thuộc cùng 1 thẻ.
+// ErrorEntry represents practice errors recorded for an optional card ID.
 type ErrorEntry struct {
 	Wrong  []string
 	CardID *int64
 }
 
-// NormalizedWrong chuẩn hóa danh sách từ sai (trim + hạ chữ thường, bỏ rỗng).
+// NormalizedWrong returns trimmed lowercase error words, filtering out empty entries.
 func (e ErrorEntry) NormalizedWrong() []string {
 	out := make([]string, 0, len(e.Wrong))
 	for _, w := range e.Wrong {
@@ -185,3 +147,4 @@ func (e ErrorEntry) NormalizedWrong() []string {
 	}
 	return out
 }
+

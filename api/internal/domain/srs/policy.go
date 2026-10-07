@@ -5,35 +5,24 @@ import (
 	"time"
 )
 
-// Hằng số engine — port nguyên vẹn từ api/srs.go v1.
 const (
-	// minReviewsForFSRS: dưới ngưỡng này dùng chuỗi lịch 1-3-7-14-30 thay vì
-	// FSRS-lite (thẻ mới chưa đủ dữ liệu để mô hình hoá độ khó).
 	minReviewsForFSRS = 3
-	// maxIntervalDays trần trên của cả stability lẫn interval.
-	maxIntervalDays = 365
+	maxIntervalDays   = 365
 )
 
-// fallbackIntervals ánh xạ reps -> số ngày tới hạn (1-3-7-14-30).
 var fallbackIntervals = []int{1, 3, 7, 14, 30}
 
-// ScheduleResult là kết quả chấm điểm 1 thẻ.
+// ScheduleResult represents the outcome of an SRS review calculation.
 type ScheduleResult struct {
 	DueAt        time.Time
 	IntervalDays int
 	Stability    float64
 	Difficulty   float64
-	// Lapse = user bấm "Quên" → tăng lapses của card.
-	Lapse bool
-	// FallbackUsed = đi dùng chuỗi 1-3-7-14-30 thay vì FSRS-lite.
+	Lapse        bool
 	FallbackUsed bool
 }
 
-// ScheduleNext tính lịch ôn kế tiếp. Hàm thuần — dễ test, không I/O.
-//
-// V1 dùng FSRS-lite (không phải ts-fsrs: tránh trôi version + giữ build
-// offline) với cùng input (grade 1-4, stability, difficulty) và chuỗi
-// fallback 1-3-7-14-30 khi reps < 3.
+// ScheduleNext computes the next review date and updated stability/difficulty metrics.
 func ScheduleNext(reps int, stability, difficulty float64, grade Grade, now time.Time) ScheduleResult {
 	now = now.UTC()
 	if grade == GradeAgain {
@@ -56,8 +45,6 @@ func ScheduleNext(reps int, stability, difficulty float64, grade Grade, now time
 		}
 	}
 	if reps < minReviewsForFSRS {
-		// Bounds check TRƯỚC khi index: thứ tự cũ index trước và sẽ panic nếu
-		// reps vượt len(fallbackIntervals).
 		if reps < 0 {
 			reps = 0
 		}
@@ -95,9 +82,7 @@ func ScheduleNext(reps int, stability, difficulty float64, grade Grade, now time
 	}
 }
 
-// Replay tính lại reps/lapses/stability/difficulty/due của 1 card từ lịch sử
-// review. Sync merge gọi hàm này khi lịch sử từ peer bổ sung thêm review
-// (append-only, không LWW) — port từ vòng recompute trong mergeReviews.
+// Replay recalculates reps, lapses, stability, difficulty, and due date from historical reviews.
 func Replay(reviews []Review) (reps, lapses int, stability, difficulty float64, due time.Time) {
 	for _, r := range reviews {
 		res := ScheduleNext(reps, stability, difficulty, r.Grade, r.ReviewedAt)
@@ -110,8 +95,6 @@ func Replay(reviews []Review) (reps, lapses int, stability, difficulty float64, 
 	return reps, lapses, stability, difficulty, due
 }
 
-// initDifficulty ánh xạ grade của lần FSRS đầu -> difficulty (dải FSRS D
-// 1..10, thấp = dễ).
 func initDifficulty(grade Grade) float64 {
 	switch grade {
 	case GradeAgain:
@@ -125,7 +108,6 @@ func initDifficulty(grade Grade) float64 {
 	}
 }
 
-// initStability ánh xạ grade của lần FSRS đầu -> stability tính bằng ngày.
 func initStability(grade Grade) float64 {
 	switch grade {
 	case GradeAgain:
@@ -139,8 +121,8 @@ func initStability(grade Grade) float64 {
 	}
 }
 
-// stabilityFactor nhân stability sau mỗi lần ôn FSRS.
 func stabilityFactor(grade Grade) float64 {
+
 	switch grade {
 	case GradeAgain:
 		return 0.3

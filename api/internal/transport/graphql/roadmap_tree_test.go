@@ -115,19 +115,27 @@ func Test_roadmap_tree_query_returns_all_five_levels_in_one_request(t *testing.T
 	require.Len(t, stage.Topics, 3)
 	require.Equal(t, "CURRENT", stage.Topics[0].Level, "node đầu tiên luôn CURRENT")
 	require.Equal(t, "LOCKED", stage.Topics[1].Level, "node sau node chưa xong phải LOCKED")
-	// Layout `direction=UP` + `terrain=MEADOW` (amp = 40) ⇒ node nằm quanh
-	// trục giữa ngang và đi từ ĐÁY lên (`Y` giảm dần theo thứ tự node). Đây
-	// là hợp đồng của `domain/roadmap.ComputeLayout` — resolver chỉ chuyển tiếp,
-	// test này bắt được nếu ai đó tình cờ "giúp" tính lại ở transport.
+	// Layout `direction=UP` (DEFAULT của cột) + `terrain=MEADOW` ⇒ node nằm
+	// quanh trục giữa ngang và đi từ ĐÁY lên (`Y` giảm dần theo thứ tự node).
+	// Đây là hợp đồng của `domain/roadmap.ComputeLayout` — resolver chỉ chuyển
+	// tiếp, test này bắt được nếu ai đó tình cờ "giúp" tính lại ở transport.
 	//
-	// `MEADOW` (không phải `PLAIN` như trước M7a): `enum Terrain` cũ khai sai
-	// 6 giá trị, `terrainOf` rơi về `PLAIN` cho mọi giá trị ngoài `desert` ⇒
-	// biên độ 0 và node nằm CHÍNH XÁC trên trục giữa. Sau M7a `amp(meadow)=40`
-	// nên x dao động quanh 500.
-	assert.InDelta(t, 500.0, stage.Topics[0].Point.X, 60,
-		"node phải nằm quanh trục giữa ngang — lệch quá xa là layout không còn bám trục")
-	require.Equal(t, domainroadmap.MapViewHeight-domainroadmap.MapMargin, stage.Topics[0].Point.Y,
-		"node đầu nằm ở đáy trong lề an toàn (MapViewHeight - MapMargin)")
+	// Hợp đồng hình học (đóng băng 2026-09-29): trục phụ dài `MapCanvasHeight`
+	// (900), tâm dao động ở giữa nó; trục chính của `up` là Y, node 0 ở đáy
+	// trong lề an toàn. Dùng HẰNG SỐ của domain chứ không hard-code 500/2000
+	// như bản cũ — resolver không được tự tính lại.
+	//
+	// Không assert "node 0 sát trục giữa": biên độ nay là TỈ LỆ chiều cao
+	// (meadow ≈ ±29% × 900 ≈ ±262) chứ không phải ±40 như bản cũ, nên node đầu
+	// có thể lệch trục giữa. Cái phải assert là node NẰM TRONG KHUNG — đó mới
+	// là hợp đồng mà client dựa vào để quyết định có scroll tới được không.
+	assert.GreaterOrEqual(t, stage.Topics[0].Point.X, domainroadmap.MapMargin,
+		"node phải nằm trong lề an toàn — lệch quá xa là layout không còn bám trục")
+	assert.LessOrEqual(t, stage.Topics[0].Point.X, domainroadmap.MapCanvasHeight-domainroadmap.MapMargin,
+		"node phải nằm trong lề an toàn")
+	require.Equal(t, domainroadmap.MapCanvasWidth(len(stage.Topics))-domainroadmap.MapMargin,
+		stage.Topics[0].Point.Y,
+		"node đầu nằm ở đáy trong lề an toàn (MapCanvasWidth(n) - MapMargin)")
 	require.Less(t, stage.Topics[1].Point.Y, stage.Topics[0].Point.Y, "node sau phải cao hơn node trước khi đi lên")
 	require.False(t, stage.Topics[0].MapPinned)
 

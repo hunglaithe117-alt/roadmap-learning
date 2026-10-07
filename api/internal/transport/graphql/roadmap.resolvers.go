@@ -55,9 +55,6 @@ func (r *stageResolver) Milestones(ctx context.Context, obj *model.Stage) ([]mod
 		return nil, err
 	}
 	out := []model.Milestone{}
-	// `stageTopics` lọc theo stageID nên trả ≤1 StageView. Vòng lặp thay vì
-	// index trực tiếp để hàm này không phụ thuộc vào việc hàm kia có lọc hay
-	// không — lệch 1 chỗ là 500 cho cả cây.
 	for _, sv := range views {
 		for _, m := range sv.Milestones {
 			out = append(out, milestoneView(m))
@@ -78,17 +75,12 @@ func (r *stageResolver) Deck(ctx context.Context, obj *model.Stage) (*model.Deck
 	return deckRefView(ref), nil
 }
 
-// activityList tách cột `activities` (JSON array string) thành mảng —
-// `decodeActivities` giải thích vì sao JSON hỏng không được làm hỏng cả cây.
+// ActivityList is the resolver for the activityList field.
 func (r *topicResolver) ActivityList(ctx context.Context, obj *model.Topic) ([]string, error) {
 	return decodeActivities(obj.Activities), nil
 }
 
-// Level đọc bảng bên cạnh do `stageTopics` điền — xem `Loaders.topicMeta`.
-// KHÔNG tính ở đây: luật thuộc `domain/roadmap.LevelStates`, đã chạy 1 lần cho
-// cả stage trong application service. Tính lần thứ hai ở resolver là 2 bản luật
-// trôi khỏi nhau — loại bug đã xảy ra ở M2 khi ghép layout theo chỉ số thay vì
-// theo id.
+// Level is the resolver for the level field.
 func (r *topicResolver) Level(ctx context.Context, obj *model.Topic) (model.LevelState, error) {
 	meta := r.loaders(ctx).TopicMeta(parseID(obj.ID))
 	return levelOf(string(meta.Level)), nil

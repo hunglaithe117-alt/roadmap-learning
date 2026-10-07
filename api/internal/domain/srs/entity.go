@@ -1,9 +1,4 @@
-// Package srs chứa bounded context spaced-repetition: entity `Deck`/`Card`,
-// value object `Grade`, và policy lịch ôn `ScheduleNext` + `DueFilter`.
-//
-// Port từ api/srs.go v1 (giữ nguyên hằng số và đường tính — M3 gate: "logic
-// 1:1 không đổi hành vi"). Package này thuần Go: không driver DB, không
-// framework HTTP.
+// Package srs provides domain entities and scheduling policies for spaced repetition.
 package srs
 
 import (
@@ -11,45 +6,35 @@ import (
 	"time"
 )
 
-// Lang là ngôn ngữ của deck, frozen contract zh|en (xen khoá DB ở
-// migrations/00001_init.sql).
+// Supported language codes.
 const (
 	LangZH = "zh"
 	LangEN = "en"
 )
 
-// CardState là vòng đời ôn của 1 thẻ.
+// Card review states.
 const (
-	// StateNew = thẻ chưa ôn lần nào. `DueFilter` luôn trả về thẻ ở state này
-	// kể cả khi due_at còn ở tương lai (CreateCard gán +24h).
 	StateNew    = "new"
 	StateReview = "review"
 )
 
-// Deck là bộ thẻ, gốc sở hữu card (FK cards.deck_id ON DELETE CASCADE).
+// Deck represents a collection of review cards.
 type Deck struct {
 	ID        int64
 	Name      string
 	Lang      string
 	CreatedAt string
-	// Sync columns: guid là natural key để peer merge, updated_at là mốc
-	// LWW, deleted là tombstone 0|1. KHÔNG dùng gorm.DeletedAt (STACK-V2-PLAN
-	// §4.4 — logic sync LWW đã xong phụ thuộc integer này).
 	GUID      string
 	UpdatedAt string
 	Deleted   int
 }
 
-// Card là 1 thẻ ôn. Cột null của SQLite (tone/ipa/stress/audio_url) là *string
-// ở đây để phân biệt NULL với chuỗi rỗng — v1 đọc bằng COALESCE nên mất
-// khác biệt này; domain giữ nguyên để repository M2 quyết định.
+// Card represents a spaced repetition flashcard.
 type Card struct {
-	ID     int64
-	DeckID int64
-	Front  string
-	Back   string
-	// Pinyin là pinyin có số thanh ("ni3 hao3"); `content` context dịch sang
-	// dấu thanh qua MarkSyllable.
+	ID         int64
+	DeckID     int64
+	Front      string
+	Back       string
 	Pinyin     string
 	DueAt      time.Time
 	Stability  float64
@@ -67,17 +52,26 @@ type Card struct {
 	Deleted    int
 }
 
-// IsDueNow là điều kiện hẹn giờ mà DueFilter áp dụng: đã tới hạn HOẶC chưa
-// từng ôn. Trả về false cho thẻ đã xóa mềm.
-func (c Card) IsDueNow(now time.Time) bool {
-	return !c.IsDeleted() && (c.State == StateNew || !c.DueAt.After(now))
+// DueNow reports whether a card is due for review based on due time and state.
+func DueNow(dueAt time.Time, state string, deleted int, now time.Time) bool {
+	if deleted != 0 {
+		return false
+	}
+	if state == StateNew {
+		return true
+	}
+	return !dueAt.After(now)
 }
 
-// IsDeleted đọc tombstone 0|1 thành bool để policy không lặp `== 1`.
+// IsDueNow reports whether the card is due for review at the specified time.
+func (c Card) IsDueNow(now time.Time) bool {
+	return DueNow(c.DueAt, c.State, c.Deleted, now)
+}
+
+// IsDeleted reports whether the card is soft-deleted.
 func (c Card) IsDeleted() bool { return c.Deleted != 0 }
 
-// Review là 1 lần chấm điểm, lịch sử append-only (sync merge bằng cách union
-// theo guid, không LWW).
+// Review records a single card grading event.
 type Review struct {
 	ID         int64
 	CardID     int64
@@ -87,7 +81,7 @@ type Review struct {
 	GUID       string
 }
 
-// NormalizeLang map mọi biến thể về zh|en; trả false nếu không nhận ra.
+// NormalizeLang normalizes language aliases into canonical zh or en codes.
 func NormalizeLang(s string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "zh", "zh-cn", "zh_cn", "cn":
@@ -98,3 +92,4 @@ func NormalizeLang(s string) (string, bool) {
 		return "", false
 	}
 }
+

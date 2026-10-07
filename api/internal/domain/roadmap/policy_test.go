@@ -1,6 +1,7 @@
 package roadmap
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,14 +29,16 @@ func Test_status_is_terminal(t *testing.T) {
 // hợp đồng public, test dưới đây gọi nó.
 func Test_percent_floors_and_handles_zero(t *testing.T) {
 	for _, c := range []struct{ done, required, want int }{
-		{0, 0, 0},
-		{0, 10, 0},
-		{7, 8, 87}, // 87.5 -> 87
-		{1, 3, 33}, // 33.3 -> 33
-		{10, 10, 100},
-		{1, 0, 0},
+		{done: 0, required: 0, want: 0},
+		{done: 0, required: 10, want: 0},
+		{done: 7, required: 8, want: 87}, // 87.5 -> 87
+		{done: 1, required: 3, want: 33}, // 33.3 -> 33
+		{done: 10, required: 10, want: 100},
+		{done: 1, required: 0, want: 0},
 	} {
-		assert.Equal(t, c.want, percent(c.done, c.required), "done=%d required=%d", c.done, c.required)
+		t.Run(fmt.Sprintf("done=%d required=%d", c.done, c.required), func(t *testing.T) {
+			assert.Equal(t, c.want, percent(c.done, c.required), "done=%d required=%d", c.done, c.required)
+		})
 	}
 }
 

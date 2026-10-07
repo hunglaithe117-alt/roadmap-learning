@@ -1,3 +1,4 @@
+// Package roadmapinfra loads seed JSON files into PostgreSQL idempotently.
 package roadmapinfra
 
 import (
@@ -22,48 +23,16 @@ import (
 	seed "langapp/roadmap_seed"
 )
 
-// Seed loader — port từ `api/roadmap_seed.go` v1 (app v1 vẫn giữ nguyên
-// loader cũ để SQLite của nó không đổi hành vi).
-//
-// QUY TẮC VÀNG (deepwork/roadmap-feature.md): chỉ INSERT khi natural key chưa
-// tồn tại, TUYỆT ĐỐI không UPDATE row đã có. User sửa/xoá node rồi restart
-// app không được seed mọc lại.
-//
-// Natural key:
-//
-//	path      → slug
-//	stage     → (path_id, slug)
-//	milestone → (stage_id, text)
-//	topic     → (stage_id, title)
-//	resource  → (topic_id, title)
-//
-// Khác v1: cả 2 file nạp trong 1 transaction, và terrain/direction được gán
-// sẵn cho stage mới theo `domain.MapDefaults` (bản đồ game) — migration
-// 00004 chỉ gán cho stage đã có sẵn trong DB.
-//
-// ── GUID SEED PHẢI ỔN ĐỊNH (quy tắc vàng, xem `application/content/ports.go`) ──
-//
-// Seed guid KHÔNG được là uuid4 ngẫu nhiên. Lý do: 2 máy cùng cài app mới đều
-// chạy Seeder này; nếu path của máy A có guid `4a80…` và của máy B có
-// `b091…` thì merge sẽ coi đó là 2 path khác nhau, insert path của peer rồi
-// **không resolve được cha cho stage** ("không tìm thấy cha roadmap_paths
-// guid=…") ⇒ rollback **cả** merge. Đó chính là blocker của cổng gate M3,
-// reproduce được bằng chính `Seeder` thật trên 2 schema Postgres.
-//
-// Sửa: guid seed = uuid5 theo natural key (dùng chung namespace với
-// `SeedDeckGUID`/`SeedCardGUID` — xem `seedGUID` bên dưới), nên 2 máy cùng seed
-// ra cùng guid và merge khớp. Guid user tạo tay vẫn là uuid4 qua `app.NewGUID`.
-
-// SeedFile là shape 1 file JSON seed.
+// SeedFile represents the JSON structure of a roadmap seed file.
 type SeedFile struct {
-	Language string `json:"language"`
-	Title    string `json:"title"`
-	Overview string `json:"overview"`
-	// Slug tuỳ chọn — bỏ trống thì loader tự sinh từ Title.
-	Slug   string      `json:"slug"`
-	Stages []SeedStage `json:"stages"`
+	Language string      `json:"language"`
+	Title    string      `json:"title"`
+	Overview string      `json:"overview"`
+	Slug     string      `json:"slug"`
+	Stages   []SeedStage `json:"stages"`
 }
 
+// SeedStage represents a stage in a seed file.
 type SeedStage struct {
 	ID            string      `json:"id"`
 	Title         string      `json:"title"`
@@ -73,6 +42,7 @@ type SeedStage struct {
 	Topics        []SeedTopic `json:"topics"`
 }
 
+// SeedTopic represents a topic in a seed file.
 type SeedTopic struct {
 	Title      string         `json:"title"`
 	Why        string         `json:"why"`
@@ -80,6 +50,7 @@ type SeedTopic struct {
 	Resources  []SeedResource `json:"resources"`
 }
 
+// SeedResource represents a resource in a seed file.
 type SeedResource struct {
 	Title string  `json:"title"`
 	URL   *string `json:"url"`
@@ -87,7 +58,7 @@ type SeedResource struct {
 	Note  string  `json:"note"`
 }
 
-// Seeder nạp roadmap_seed/*.json vào DB.
+// Seeder loads roadmap seed files into PostgreSQL.
 type Seeder struct {
 	db      *gorm.DB
 	log     *slog.Logger
@@ -96,14 +67,12 @@ type Seeder struct {
 	seedDir string
 }
 
-// NewSeeder dựng seeder đọc từ embed.FS của package `roadmap_seed` — đúng
-// nguồn app dùng lúc boot.
+// NewSeeder constructs a Seeder using embedded files from package roadmap_seed.
 func NewSeeder(db *gorm.DB, log *slog.Logger, nowFn app.NowFunc) *Seeder {
 	return NewSeederFromFS(db, seed.FS, log, seed.Dir, nowFn)
 }
 
-// NewSeederFromFS dựng seeder từ FS bất kỳ. Tách khỏi NewSeeder để test nạp
-// được cả trường hợp file JSON hỏng mà không phải sửa file embed thật.
+// NewSeederFromFS constructs a Seeder from an arbitrary fs.FS.
 func NewSeederFromFS(db *gorm.DB, seedFS fs.FS, log *slog.Logger, seedDir string, nowFn app.NowFunc) *Seeder {
 	if nowFn == nil {
 		nowFn = app.Clock
@@ -114,11 +83,7 @@ func NewSeederFromFS(db *gorm.DB, seedFS fs.FS, log *slog.Logger, seedDir string
 	return &Seeder{db: db, log: log, nowFn: nowFn, seedFS: seedFS, seedDir: seedDir}
 }
 
-// Run nạp toàn bộ seed file. Idempotent: chạy nhiều lần cho cùng kết quả và
-// không bao giờ ghi đè nội dung user đã sửa.
-//
-// Cả 2 file nạp trong 1 transaction: 1 file JSON hỏng ⇒ rollback toàn bộ, không
-// để lại cây nửa vời (đúng như `applyRoadmapSeeds` v1).
+// Run loads all seed files into the database idempotently.
 func (s *Seeder) Run(ctx context.Context) error {
 	files, err := s.readSeedFiles()
 	if err != nil {
@@ -130,6 +95,9 @@ func (s *Seeder) Run(ctx context.Context) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := s.nowFn().UTC().Format(time.RFC3339)
 		for _, f := range files {
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("seed canceled: %w", err)
+			}
 			if err := s.seedOnePath(ctx, tx, f, now); err != nil {
 				return err
 			}
@@ -159,11 +127,9 @@ func (s *Seeder) readSeedFiles() ([]SeedFile, error) {
 	sort.Strings(names)
 	files := make([]SeedFile, 0, len(names))
 	for _, n := range names {
-		// path.Join chứ không cộng chuỗi: embed.FS yêu cầu path không có tiền
-		// tố "./", nên seedDir = "." sẽ sinh "./roadmap_en.json" và fail đọc.
 		raw, err := fs.ReadFile(s.seedFS, path.Join(s.seedDir, n))
 		if err != nil {
-			return nil, fmt.Errorf("đọc seed %s: %w", n, err)
+			return nil, fmt.Errorf("read seed %s: %w", n, err)
 		}
 		var f SeedFile
 		if err := json.Unmarshal(raw, &f); err != nil {
@@ -175,17 +141,13 @@ func (s *Seeder) readSeedFiles() ([]SeedFile, error) {
 }
 
 func (s *Seeder) seedOnePath(ctx context.Context, tx *gorm.DB, f SeedFile, now string) error {
-	// language của seed là contract zh|en (user tạo path qua API thì nhận
-	// chuỗi tự do — xem app.ValidateLanguage).
 	if f.Language != "zh" && f.Language != "en" {
-		return fmt.Errorf("seed %s: language chỉ nhận zh hoặc en", orUnknown(f.Language))
+		return fmt.Errorf("seed %s: language must be zh or en", orUnknown(f.Language))
 	}
 	title, err := app.ValidateTitle(f.Title)
 	if err != nil {
 		return fmt.Errorf("seed %s: %s", orUnknown(f.Language), err.Error())
 	}
-	// Title trong seed là tiêu đề người đọc ("Tự học tiếng Trung ... → HSK 4"),
-	// không phải slug → tự slugify. Field `slug` (tuỳ chọn) thắng nếu có.
 	slug, err := app.ValidateSlug(domain.Slugify(firstNonEmpty(f.Slug, f.Title)))
 	if err != nil {
 		return fmt.Errorf("seed %s (%s): %s", title, f.Language, err.Error())
@@ -195,18 +157,13 @@ func (s *Seeder) seedOnePath(ctx context.Context, tx *gorm.DB, f SeedFile, now s
 		return fmt.Errorf("seed %s: %s", slug, err.Error())
 	}
 
-	// Lookup theo natural key CÓ tombstone (xem `lookupNaturalKey`): user xoá
-	// mềm path seed thì lần boot sau phải BỎ QUA chứ không insert lại —
-	// vừa vi phạm quy tắc vàng "chỉ INSERT khi natural key chưa tồn tại", vừa
-	// đụng UNIQUE `ux_roadmap_paths_slug` (tombstone vẫn giữ slug) và làm hỏng
-	// boot.
 	pathID, pathTombstoned, err := lookupNaturalKey(ctx, tx,
 		"SELECT id, deleted FROM roadmap_paths WHERE slug = ?", slug)
 	if err != nil {
 		return err
 	}
 	if pathTombstoned {
-		s.log.Info("roadmap seed: path đã bị xoá mềm, bỏ qua toàn bộ path",
+		s.log.Info("roadmap seed: path soft deleted, skipping",
 			"slug", slug)
 		return nil
 	}
@@ -234,10 +191,8 @@ func (s *Seeder) seedOneStage(ctx context.Context, tx *gorm.DB, pathID int64,
 
 	stageSlug, err := app.ValidateSlug(st.ID)
 	if err != nil {
-		// id trong docs không phải slug (vd "G0 — Chữ viết") → tự sinh slug ổn
-		// định thay vì fail cả file.
 		stageSlug = fmt.Sprintf("stage-%d", idx+1)
-		s.log.Warn("roadmap seed: stage id không phải slug, dùng slug tự sinh",
+		s.log.Warn("roadmap seed: invalid stage id, generated fallback slug",
 			"stage_id", st.ID, "path", pathSlug, "slug", stageSlug)
 	}
 	title, err := app.ValidateTitle(st.Title)
@@ -257,9 +212,7 @@ func (s *Seeder) seedOneStage(ctx context.Context, tx *gorm.DB, pathID int64,
 		return err
 	}
 	if stageTombstoned {
-		// User xoá 1 stage giữa path: bỏ qua stage đó, KHÔNG hồi sinh. Insert
-		// lại sẽ đụng `ux_roadmap_stages_path_slug` UNIQUE.
-		s.log.Info("roadmap seed: stage đã bị xoá mềm, bỏ qua",
+		s.log.Info("roadmap seed: stage soft deleted, skipping",
 			"path", pathSlug, "stage", stageSlug)
 		return nil
 	}
@@ -277,15 +230,13 @@ func (s *Seeder) seedOneStage(ctx context.Context, tx *gorm.DB, pathID int64,
 		stageID = row.ID
 	}
 	for mi, text := range st.Milestones {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("seed %s/%s: %w", pathSlug, stageSlug, err)
+		}
 		text = strings.TrimSpace(text)
 		if text == "" {
 			continue
 		}
-		// Milestone/topic/resource KHÔNG có UNIQUE theo natural key, nên nếu
-		// lookup bỏ qua tombstone thì seed sẽ insert bản sao trùng tiêu đề.
-		// Vì vậy ở 3 tầng này coi BẤT KỲ row nào (sống hay tombstone) là "đã
-		// có" → không insert lại. `id > 0` là row sống, `tombstoned` là
-		// tombstone giữ chỗ; cả hai đều chặn insert.
 		id, tombstoned, err := lookupNaturalKey(ctx, tx,
 			"SELECT id, deleted FROM roadmap_milestones WHERE stage_id = ? AND text = ?", stageID, text)
 		if err != nil {
@@ -304,6 +255,9 @@ func (s *Seeder) seedOneStage(ctx context.Context, tx *gorm.DB, pathID int64,
 		}
 	}
 	for ti, tp := range st.Topics {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("seed %s/%s: %w", pathSlug, stageSlug, err)
+		}
 		if err := s.seedOneTopic(ctx, tx, stageID, pathSlug, stageSlug, ti, tp, now); err != nil {
 			return err
 		}
@@ -328,7 +282,7 @@ func (s *Seeder) seedOneTopic(ctx context.Context, tx *gorm.DB, stageID int64,
 		return err
 	}
 	if topicTombstoned {
-		s.log.Info("roadmap seed: topic đã bị xoá mềm, bỏ qua",
+		s.log.Info("roadmap seed: topic soft deleted, skipping",
 			"path", pathSlug, "stage", stageSlug, "topic", title)
 		return nil
 	}
@@ -346,6 +300,9 @@ func (s *Seeder) seedOneTopic(ctx context.Context, tx *gorm.DB, stageID int64,
 		topicID = row.ID
 	}
 	for ri, rs := range tp.Resources {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("seed %s/%s: %w", pathSlug, stageSlug, err)
+		}
 		if err := s.seedOneResource(ctx, tx, topicID, pathSlug, stageSlug, title, ri, rs, now); err != nil {
 			return err
 		}
@@ -361,16 +318,14 @@ func (s *Seeder) seedOneResource(ctx context.Context, tx *gorm.DB, topicID int64
 		return fmt.Errorf("seed %s/%s topic %s resource %d: %s",
 			pathSlug, stageSlug, topicTitle, idx, err.Error())
 	}
-	// URL rỗng / không phải http(s) → lưu NULL (UI hiện "chưa có link") thay vì
-	// bịa link. Cảnh báo để data bug lộ ra thay vì im lặng mất link.
 	u, uerr := app.ValidateURL(rs.URL)
 	if uerr != nil && rs.URL != nil && strings.TrimSpace(*rs.URL) != "" {
-		s.log.Warn("roadmap seed: resource url không dùng được, lưu NULL",
+		s.log.Warn("roadmap seed: unusable resource url, saving NULL",
 			"title", title, "path", pathSlug, "stage", stageSlug, "reason", uerr.Error())
 	}
 	kind, kerr := app.ValidateKind(rs.Kind)
 	if kerr != nil {
-		s.log.Warn("roadmap seed: resource kind không hợp lệ, lưu rỗng",
+		s.log.Warn("roadmap seed: invalid resource kind, saving empty",
 			"title", title, "kind", rs.Kind)
 		kind = ""
 	}
@@ -379,7 +334,6 @@ func (s *Seeder) seedOneResource(ctx context.Context, tx *gorm.DB, topicID int64
 		return fmt.Errorf("seed %s/%s topic %s resource %s: %s",
 			pathSlug, stageSlug, topicTitle, title, err.Error())
 	}
-	// Xem giải thích ở milestone: row sống hay tombstone đều chặn insert.
 	id, tombstoned, err := lookupNaturalKey(ctx, tx,
 		"SELECT id, deleted FROM roadmap_resources WHERE topic_id = ? AND title = ?", topicID, title)
 	if err != nil {
@@ -400,21 +354,7 @@ func (s *Seeder) seedOneResource(ctx context.Context, tx *gorm.DB, topicID int64
 	return nil
 }
 
-// ── Lookup helpers (chỉ đọc natural key, KHÔNG update) ─────────────────────
-
-// lookupNaturalKey đọc 1 row theo natural key và trả (id, tombstoned).
-//
-// `query` PHẢI chiếu `id, deleted`. Trả về:
-//   - (id, false)      row còn sống → dùng id.
-//   - (0, true)        chỉ có tombstone (deleted = 1) → KHÔNG insert lại.
-//   - (0, false)       natural key thật sự chưa dùng → được insert.
-//
-// Vì sao phải biết tombstone thay vì lọc thẳng `AND deleted = 0`: hai tầng có
-// UNIQUE index trên natural key (`ux_roadmap_paths_slug`,
-// `ux_roadmap_stages_path_slug`) và tombstone vẫn GIỮ key đó — lọc
-// `deleted = 0` rồi insert sẽ đụng 23505 và làm hỏng boot. Ba tầng còn lại
-// không có UNIQUE, nên lọc `deleted = 0` sẽ tạo bản sao trùng tiêu đề. Một
-// query trả cả hai trạng thái xử lý được cả 4 trường hợp.
+// lookupNaturalKey reads a row by natural key and returns (id, tombstoned).
 func lookupNaturalKey(ctx context.Context, tx *gorm.DB, query string, args ...any) (id int64, tombstoned bool, err error) {
 	var row struct {
 		ID      int64
@@ -433,35 +373,7 @@ func lookupNaturalKey(ctx context.Context, tx *gorm.DB, query string, args ...an
 	return row.ID, false, nil
 }
 
-// ── GUID seed ổn định (uuid5 theo natural key) ─────────────────────────────
-//
-// Dùng CHUNG namespace `contentapp.SeedGUIDNamespace` với `SeedDeckGUID` /
-// `SeedCardGUID`, và CHUNG hàm `uuid.NewSHA1` — không tự viết lại thuật toán,
-// không tạo namespace riêng cho roadmap. Vì sao import `application/content`
-// ở đây được: đó là nơi khai báo namespace, cùng kiểu với
-// `infrastructure/content` đã import `application/roadmap`.
-// Không dùng `unicode/norm` để chuẩn hoá (GOROOT máy build thiếu package đó —
-// đã ghi ở bàn giao M1).
-//
-// `kind` là tiền tố tách miềng ("path", "stage", …) y hệt cách `SeedDeckGUID`
-// dùng "deck:" — tránh 2 loại node trùng natural key ra cùng guid.
-//
-// `position` là chỉ số thứ tự trong danh sách cha, và là thứ duy nhất giữ
-// `path`/`stage` khỏi việc lệ guid khi 2 máy có bộ file seed khác nhau:
-//
-//   - `path` → `ux_roadmap_paths_slug` UNIQUE ⇒ slug đã là natural key duy
-//     nhất, truyền `position = 0` CỐ Ý. Truyền chỉ số thật sẽ gắn guid vào
-//     *thứ tự file*, mà 2 máy có thể cài bộ file khác nhau.
-//   - `stage` → `ux_roadmap_stages_path_slug` UNIQUE ⇒ (pathSlug, stageSlug)
-//     đủ, `position = 0`.
-//   - milestone / topic / resource → **KHÔNG** có UNIQUE theo natural key (xem
-//     comment `lookupNaturalKey`), nên file seed về lý thuyết có thể chứa 2 mục
-//     trùng tiêu đề trong cùng 1 stage/topic. Nếu chỉ khoá theo tiêu đề thì 2
-//     mục đó sinh **cùng một guid** ⇒ `ux_*_guid` UNIQUE làm lần seed sau bị
-//     skip ⇒ mất dữ liệu. Nối thêm `position` (thứ tự trong danh sách cha) để
-//     mỗi mục có guid riêng. Đổi file seed (thêm 1 topic giữa danh sách) sẽ
-//     đổi guid của các topic sau — chấp nhận được: natural key thật sự trùng
-//     thì không có cách nào ổn định hơn, và dữ liệu seed chỉ đổi khi file đổi.
+// seedGUID generates a deterministic UUIDv5 from natural key parts.
 func seedGUID(kind string, position int, parts ...string) string {
 	key := kind + ":" + strconv.Itoa(position) + ":" + strings.Join(parts, ":")
 	return uuid.NewSHA1(uuid.MustParse(contentapp.SeedGUIDNamespace), []byte(key)).String()
@@ -478,7 +390,8 @@ func firstNonEmpty(vals ...string) string {
 
 func orUnknown(s string) string {
 	if strings.TrimSpace(s) == "" {
-		return "(thiếu language)"
+		return "(missing language)"
 	}
 	return s
 }
+

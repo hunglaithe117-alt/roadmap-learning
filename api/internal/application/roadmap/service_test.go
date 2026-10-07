@@ -95,7 +95,7 @@ func (f *fakeRepo) SoftDeletePath(_ context.Context, _ Tx, id int64) error {
 // Không có bước sắp này thì fake trả thứ tự MAP (Go randomize), còn repository
 // thật trả thứ tự cột. Hệ quả: test viết theo giả định "thứ tự là của SQL" sẽ
 // xanh ở fake và đỏ ở production, hoặc ngược lại — và test sẽ chạy ngẫu nhiên.
-// `GetPath` tin thứ tự do repository đảm bảo, nên fake cũng phải đảm bảo.
+// `PathTree` tin thứ tự do repository đảm bảo, nên fake cũng phải đảm bảo.
 func (f *fakeRepo) ListStages(_ context.Context, pathID int64) ([]Stage, error) {
 	out := []Stage{}
 	for _, s := range f.stages {
@@ -479,9 +479,11 @@ func Test_validate_slug_rejects_bad_input_with_vietnamese_message(t *testing.T) 
 		{"-lead", "slug không được bắt đầu hoặc kết thúc bằng dấu -"},
 		{"trail-", "slug không được bắt đầu hoặc kết thúc bằng dấu -"},
 	} {
-		_, err := ValidateSlug(c.in)
-		require.Error(t, err, "input %q phải bị chặn", c.in)
-		assert.Equal(t, c.want, err.Error())
+		t.Run(c.in, func(t *testing.T) {
+			_, err := ValidateSlug(c.in)
+			require.Error(t, err, "input %q phải bị chặn", c.in)
+			assert.Equal(t, c.want, err.Error())
+		})
 	}
 	got, err := ValidateSlug("  ZH-G0  ")
 	require.NoError(t, err)
@@ -496,9 +498,11 @@ func Test_validate_url_only_accepts_http_and_https(t *testing.T) {
 		{"javascript:alert(1)", "url không hợp lệ"},
 		{"không phải url", "url không hợp lệ"},
 	} {
-		_, err := ValidateURL(&c.in)
-		require.Error(t, err, "url %q phải bị chặn", c.in)
-		assert.Equal(t, c.want, err.Error())
+		t.Run(c.in, func(t *testing.T) {
+			_, err := ValidateURL(&c.in)
+			require.Error(t, err, "url %q phải bị chặn", c.in)
+			assert.Equal(t, c.want, err.Error())
+		})
 	}
 	empty := "   "
 	got, err := ValidateURL(&empty)
@@ -779,7 +783,7 @@ func Test_get_path_returns_tree_with_layout_and_level_state(t *testing.T) {
 	_, err = svc.SetTopicStatus(ctx, topics[0].ID, strPtr(StatusDone), nil)
 	require.NoError(t, err)
 
-	view, err := svc.GetPath(ctx, "p")
+	view, err := svc.PathTree(ctx, "p")
 	require.NoError(t, err)
 	require.Len(t, view.Stages, 1)
 	require.Len(t, view.Stages[0].Topics, 3)
@@ -813,7 +817,7 @@ func Test_get_path_marks_pinned_nodes(t *testing.T) {
 	_, err = svc.CreateTopic(ctx, stage.ID, TopicInput{Title: "T", MapX: f64Ptr(10), MapY: f64Ptr(20)})
 	require.NoError(t, err)
 
-	view, err := svc.GetPath(ctx, "p")
+	view, err := svc.PathTree(ctx, "p")
 	require.NoError(t, err)
 	require.Len(t, view.Stages[0].Topics, 1)
 	assert.True(t, view.Stages[0].Topics[0].MapPinned)
@@ -823,7 +827,7 @@ func Test_get_path_marks_pinned_nodes(t *testing.T) {
 
 func Test_get_path_unknown_slug_returns_404(t *testing.T) {
 	svc, _, _ := newTestService()
-	_, err := svc.GetPath(context.Background(), "khong-co")
+	_, err := svc.PathTree(context.Background(), "khong-co")
 	require.Error(t, err)
 	var appErr *Error
 	require.ErrorAs(t, err, &appErr)

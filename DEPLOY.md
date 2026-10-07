@@ -72,20 +72,51 @@ docker compose exec -T postgres psql -U langapp -d langapp \
 docker compose --profile v2 restart app-v2
 ```
 
-## Backup / restore — CHƯA CÓ (trả 501)
+## Backup / restore — KHÔNG CÓ (endpoint đã bị gỡ, trả 404)
 
-`GET /api/backup` và `POST /api/restore` trả **501 "chưa bật"**. Lý do: Postgres
-cần `pg_dump`/`pg_restore` (chạy subprocess), mà máy này **không có** 2 binary đó.
-Không có đường thay bằng SQL thuần — `VACUUM INTO` là của SQLite, Postgres không có.
+`GET /api/backup` và `POST /api/restore` **không còn tồn tại**: gỡ cả route, cả
+port `BackupPort`, và mục backup/restore ở trang Cài đặt.
 
-UI route Cài đặt hiện báo lỗi rõ, không tải về file hỏng.
+Gọi vào **không còn trả 501** (đã kiểm trên app đang chạy):
+
+- `GET /api/backup` → **200 + `index.html`**. Lý do: `registerStatic` mount
+  `NoRoute(staticSPA)` nên mọi GET lạ đều rơi về SPA (cố ý, để client-side
+  routing chạy được) — không phải 404.
+- `POST /api/restore` → **405**, vì `staticSPA` chặn mọi method khác GET/HEAD.
+
+⚠️ Trả **404** thật cho `/api/*` lạ là 1 thay đổi **chưa làm** (sẽ phải sửa
+`staticSPA`, ảnh hưởng cả namespace `/api`). Xem
+`phases/task-memory/remove-backup-restore.md` §4.
+
+Lý do gỡ: 2 endpoint ấy chưa bao giờ có hiện thực — chúng chỉ trả 501 kèm
+message tiếng Việt giải thích, tức là trên UI chỉ tồn tại 1 nút bấm luôn lỗi.
+Postgres cần `pg_dump`/`pg_restore` (chạy subprocess) mà image này không có;
+không có đường thay bằng SQL thuần vì `VACUUM INTO` là của SQLite, Postgres không
+có. Chi tiết: `phases/task-memory/remove-backup-restore.md`.
+
+**Không có tính năng nào thay thế.** Muốn sao lưu dữ liệu thì dùng `pg_dump` từ
+ngoài container:
+
+```bash
+docker compose exec -T postgres pg_dump -U langapp -d langapp > langapp-$(date +%F).sql
+```
+
+Nạp lại:
+
+```bash
+docker compose exec -T postgres psql -U langapp -d langapp < langapp-2026-09-29.sql
+```
+
+⚠️ `psql` nạp lại **không xoá** bảng cũ trước — nếu muốn đúng nghĩa "ghi đè" thì
+xoá schema public trước (giống lệnh ở mục trên), rồi mới nạp.
 
 ## Đồng bộ 2 máy (merge peer, 1 chiều)
 
-Chưa bật được vì nó cũng đi qua file backup. Thiết kế đã có trong
-`application/sync` + `domain/sync.Decide` (LWW theo `updated_at`, tombstone thắng,
-reviews append dedupe `guid`, clock-skew chỉ cảnh báo). Khi nào có `pg_dump` thì bật
-lại được — xem `phases/task-memory/stack-v2-m7a.md`.
+Chưa bật được. Thiết kế đã có trong `application/sync` + `domain/sync.Decide`
+(LWW theo `updated_at`, tombstone thắng, reviews append dedupe `guid`, clock-skew
+chỉ cảnh báo). `mutation.sync` khi chưa cấu hình nguồn snapshot peer trả **501**
+"chưa cấu hình nguồn snapshot peer" — 501 thật, vẫn còn nguyên. Xem
+`phases/task-memory/stack-v2-m7a.md`.
 
 ## Env
 
@@ -113,6 +144,51 @@ make test         # go test ./... với DSN thật
 make test-web     # pnpm vitest run + pnpm typecheck
 make check        # test + test-web + go vet + go build  ← chạy cái này
 ```
+
+> ### ⚠️ `make test` CẦN app đã boot ít nhất 1 lần — nếu không sẽ làm hỏng app
+>
+> Đây là cái **giết app**, nên đọc trước khi chạy.
+>
+> `make test` chạy vào database `langapp_test` — **không phải** database app —
+> nên trực giác "test không đụng app" là đúng. Nhưng có 1 điều kiện ngầm: app
+> phải đã boot ít nhất **một lần** để extension `pg_trgm` tồn tại trong
+> `langapp`. `pg_trgm` là extension **cấp database**, và `00002_fts.sql` cài nó
+> bằng `CREATE EXTENSION IF NOT EXISTS` — nghĩa là lần đầu tiên nó nằm ở
+> `search_path` của app, tức `public`.
+>
+> Nếu bạn làm đúng thứ tự sau — tức là **đúng bước 1 của mục "Reset dữ liệu"** ở
+> trên:
+>
+> ```bash
+> docker compose --profile v2 down -v     # xoá volume ⇒ DB app rỗng, chưa có pg_trgm
+> make test                              # ⚠️ KHÔNG được chạy ở trạng thái này
+> docker compose --profile v2 up -d       # app sẽ KHÔNG boot được
+> ```
+>
+> thì `make test` sẽ tiêm `pg_trgm` vào sai chỗ trong database app. Sau đó
+> `00002_fts.sql` gặp `IF NOT EXISTS` nên **không cài lại**, mà `search_path` của
+> app không chứa schema đó ⇒ migration hỏng vĩnh viễn:
+>
+> ```
+> ERROR: operator class "gin_trgm_ops" does not exist (SQLSTATE 42704)
+> ```
+>
+> Triệu chứng: container `app-v2` kẹt ở `Restarting (1) …` **mãi mãi**, không
+> phải hết sau vài giây. Cách phục hồi: xoá volume rồi boot lại
+> (`docker compose --profile v2 down -v && docker compose --profile v2 up -d`).
+>
+> **Thứ tự an toàn:** nếu vừa `down -v` xong thì **boot app trước** rồi mới
+> chạy test:
+>
+> ```bash
+> docker compose --profile v2 down -v
+> docker compose --profile v2 up -d      # ← chờ healthy, migration + seed xong
+> make test                             # giờ mới an toàn
+> ```
+>
+> `make test` chỉ cần app **đã từng** boot, không cần app đang chạy — nên
+> `docker compose stop app-v2` trước khi test cũng được, miễn là nó đã boot
+> được 1 lần và volume còn nguyên.
 
 ### Vì sao phải qua `make` chứ không `go test ./...` trần
 
@@ -154,6 +230,25 @@ cleanup.
 > `pnpm vitest run` **không** typecheck. Thêm 1 giá trị hợp lệ vào 1 union type
 > có thể làm test xanh trong khi `pnpm build` đỏ — vì vậy `make test-web` gọi
 > `pnpm typecheck` luôn.
+
+## Sinh code (codegen)
+
+`make generate` chạy `gqlgen generate` + `buf generate`. Cần **4** tool trong
+`PATH`: `buf`, `protoc-gen-go`, `protoc-gen-go-grpc` và `gqlgen`. Thiếu cái nào
+thì `make generate` báo ngay kèm lệnh cài (target `check-codegen-tools`), không
+fail mơ hồ kiểu "executable file not found". Cài tất cả:
+
+```bash
+go install github.com/bufbuild/buf/cmd/buf@latest
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+go install github.com/99designs/gqlgen@latest
+```
+
+Binary nằm ở `$(go env GOPATH)/bin` (mặc định `~/go/bin`) — thêm vào `PATH` của
+shell đang dùng. `make generate-check` so hash trước/sau khi codegen để bắt
+generated code stale (sửa schema quên regenerate), và vẫn giữ kiểm tra `go.sum`.
+`buf` không cần network/BSR ở đây vì `api/proto/buf.yaml` không khai `deps`.
 
 ## Dò query khi dev
 

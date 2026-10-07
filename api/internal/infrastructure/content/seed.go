@@ -4,20 +4,15 @@ import (
 	app "langapp/internal/application/content"
 )
 
-// SeedContent là hiện thực `application/content.StaticContent` trên dữ liệu
-// bundle trong package này (HSK, en_dict, PVO/TMRND, bút thuận, bài đọc).
-//
-// Dữ liệu tĩnh đặt ở infrastructure (không phải application) là để giữ tầng
-// application chỉ còn interface + quy tắc điều phối — đúng vị trí M2 đã đặt
-// loader seed roadmap.
+// SeedContent implements application/content.StaticContent using bundled seed data.
 type SeedContent struct{}
 
-// NewSeedContent dựng adapter dữ liệu tĩnh.
+// NewSeedContent constructs a SeedContent adapter.
 func NewSeedContent() *SeedContent { return &SeedContent{} }
 
 var _ app.StaticContent = (*SeedContent)(nil)
 
-// HskSeedByLevel chuyển seed HSK của infrastructure sang DTO của application.
+// HskSeedByLevel returns HSK seed entries for a level.
 func (SeedContent) HskSeedByLevel(level string) []app.StaticHskEntry {
 	rows := HskSeedByLevel(level)
 	if rows == nil {
@@ -33,7 +28,7 @@ func (SeedContent) HskSeedByLevel(level string) []app.StaticHskEntry {
 	return out
 }
 
-// EnDict chuyển từ điển tích hợp sang DTO của application.
+// EnDict returns bundled English dictionary entries.
 func (SeedContent) EnDict() []app.StaticENEntry {
 	rows := SeedEnDict()
 	out := make([]app.StaticENEntry, 0, len(rows))
@@ -45,10 +40,16 @@ func (SeedContent) EnDict() []app.StaticENEntry {
 	return out
 }
 
-// PVO, PVOT82, TMRND, TMRNDT82 là 4 nhóm thẻ seed tiếng Anh của v1.
-func (SeedContent) PVO() []app.StaticSeedCard      { return toStaticCards(SeedPVOCards()) }
-func (SeedContent) PVOT82() []app.StaticSeedCard   { return toStaticCards(SeedPVOCardsT82()) }
-func (SeedContent) TMRND() []app.StaticSeedCard    { return toStaticCards(SeedTMRNDCards()) }
+// PVO returns bundled PVO seed cards.
+func (SeedContent) PVO() []app.StaticSeedCard { return toStaticCards(SeedPVOCards()) }
+
+// PVOT82 returns bundled PVOT82 seed cards.
+func (SeedContent) PVOT82() []app.StaticSeedCard { return toStaticCards(SeedPVOCardsT82()) }
+
+// TMRND returns bundled TMRND seed cards.
+func (SeedContent) TMRND() []app.StaticSeedCard { return toStaticCards(SeedTMRNDCards()) }
+
+// TMRNDT82 returns bundled TMRNDT82 seed cards.
 func (SeedContent) TMRNDT82() []app.StaticSeedCard { return toStaticCards(SeedTMRNDCardsT82()) }
 
 func toStaticCards(rows []SeedCard) []app.StaticSeedCard {
@@ -61,7 +62,7 @@ func toStaticCards(rows []SeedCard) []app.StaticSeedCard {
 	return out
 }
 
-// StrokeIndex trả index nhẹ bút thuận của 1 level.
+// StrokeIndex returns the stroke order summary index for a level.
 func (SeedContent) StrokeIndex(level string) []app.StaticStrokeIndex {
 	rows := StrokeIndex(level)
 	out := make([]app.StaticStrokeIndex, 0, len(rows))
@@ -71,7 +72,7 @@ func (SeedContent) StrokeIndex(level string) []app.StaticStrokeIndex {
 	return out
 }
 
-// LookupStroke trả chi tiết bút thuận 1 chữ.
+// LookupStroke returns stroke order details for a character.
 func (SeedContent) LookupStroke(level, hanzi string) (app.StaticStrokeInfo, bool) {
 	info, ok := LookupStroke(level, hanzi)
 	if !ok {
@@ -87,7 +88,7 @@ func (SeedContent) LookupStroke(level, hanzi string) (app.StaticStrokeInfo, bool
 	}, true
 }
 
-// ReaderArticles lọc bài đọc theo level + id.
+// ReaderArticles filters reader articles by level and ID.
 func (SeedContent) ReaderArticles(level, id string) []app.StaticReaderArticle {
 	rows := ReaderArticles(level, id)
 	out := make([]app.StaticReaderArticle, 0, len(rows))

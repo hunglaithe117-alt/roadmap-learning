@@ -88,7 +88,7 @@ func wireOn(t *testing.T, db *gorm.DB) *harness {
 	// `testdb` đã đóng pool trong `t.Cleanup`, đóng 2 lần là thừa.
 	t.Cleanup(func() { _ = audio.Close() })
 
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 	return &harness{container: c}
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	contentapp "langapp/internal/application/content"
-	practiceapp "langapp/internal/application/practice"
 	roadmapapp "langapp/internal/application/roadmap"
 	srsapp "langapp/internal/application/srs"
 )
@@ -221,8 +220,10 @@ func Test_thieu_axes_returns_all_eight_axes_sorted(t *testing.T) {
 
 	require.Len(t, resp.Axes, 8, "checklist THIEU có 8 trục A-H")
 	for i, a := range resp.Axes {
-		require.Equal(t, string(rune('A'+i)), a.Code, "trục phải ra theo thứ tự A..H ổn định")
-		require.NotEmpty(t, a.Name)
+		t.Run(fmt.Sprintf("axis %d", i), func(t *testing.T) {
+			require.Equal(t, string(rune('A'+i)), a.Code, "trục phải ra theo thứ tự A..H ổn định")
+			require.NotEmpty(t, a.Name)
+		})
 	}
 }
 
@@ -451,7 +452,7 @@ func Test_delete_path_soft_deletes_cascade_and_then_404(t *testing.T) {
 	require.True(t, resp.DeletePath.Ok, "lỗi: %+v", resp.DeletePath.Error)
 
 	// Cây phải biến mất (soft delete + cascade trong cùng transaction).
-	_, err := h.container.Roadmap.GetPath(ctx, "zh")
+	_, err := h.container.Roadmap.PathTree(ctx, "zh")
 	require.Error(t, err)
 
 	// Xoá lần 2 phải 404, không phải 200 im lặng.
@@ -684,5 +685,3 @@ func Test_progress_over_range_counts_completed_topics(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
-
-var _ = practiceapp.DefaultErrorLimit

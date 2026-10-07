@@ -13,6 +13,7 @@
 package graphql
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -44,8 +45,10 @@ func Test_graphql_error_code_covers_business_status(t *testing.T) {
 		http.StatusNotImplemented: model.ErrorCodeNotImplemented,
 	}
 	for status, want := range business {
-		assert.Equal(t, want, codeForStatus(status),
-			"HTTP %d phải ánh xạ sang ErrorCode riêng, không gộp", status)
+		t.Run(fmt.Sprintf("HTTP %d", status), func(t *testing.T) {
+			assert.Equal(t, want, codeForStatus(status),
+				"HTTP %d phải ánh xạ sang ErrorCode riêng, không gộp", status)
+		})
 	}
 	// Không phải nghiệp vụ ⇒ hệ thống. 500 là hằng của application
 	// (`StatusInternalServerError`), dùng ở đây để test KHÔNG phụ thuộc
@@ -56,7 +59,9 @@ func Test_graphql_error_code_covers_business_status(t *testing.T) {
 	// client. `application/sync` dùng 501 chứ không dùng 503 cho "chưa cấu
 	// hình" đúng vì lý do này; test khoá ranh giới đó.
 	for _, status := range []int{500, 502, 503, 418} {
-		assert.Equal(t, model.ErrorCodeInternal, codeForStatus(status), "HTTP %d phải là INTERNAL", status)
+		t.Run(fmt.Sprintf("HTTP %d", status), func(t *testing.T) {
+			assert.Equal(t, model.ErrorCodeInternal, codeForStatus(status), "HTTP %d phải là INTERNAL", status)
+		})
 	}
 	// Mọi code trong schema đều phải sinh ra được.
 	produced := map[model.ErrorCode]bool{}
@@ -65,7 +70,9 @@ func Test_graphql_error_code_covers_business_status(t *testing.T) {
 	}
 	produced[model.ErrorCodeInternal] = true
 	for _, code := range model.AllErrorCode {
-		assert.True(t, produced[code], "enum %s có trong schema nhưng không status nào sinh ra nó — code chết", code)
+		t.Run(code.String(), func(t *testing.T) {
+			assert.True(t, produced[code], "enum %s có trong schema nhưng không status nào sinh ra nó — code chết", code)
+		})
 	}
 }
 

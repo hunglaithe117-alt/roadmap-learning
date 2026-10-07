@@ -9,13 +9,7 @@ import (
 	syncapp "langapp/internal/application/sync"
 )
 
-// Resolver là gốc của cây resolver, giữ 6 service của 6 bounded context có
-// bảng (`audio` không có mặt — binary qua REST, xem `internal/transport/http`).
-//
-// 1 struct cho cả 6 thay vì 6 struct: các use case đã gom theo context ở tầng
-// application (`srs.Service` lo cả deck/card/review…) nên chia nhỏ ở đây chỉ
-// tăng file mà không tách được trách nhiệm nào. Đổi cấu trúc là đổi hợp đồng
-// với `cmd/langapp` và với test.
+// Resolver is the root resolver struct holding application service dependencies.
 type Resolver struct {
 	SRS      *srsapp.Service
 	Content  *contentapp.Service
@@ -25,9 +19,7 @@ type Resolver struct {
 	Sync     *syncapp.Service
 }
 
-// NewResolver dựng gốc resolver. Không kiểm tra nil service: 1 context thiếu
-// là lỗi wiring lúc boot (DI gọi `Container` đã dựng đủ), và để nil nổi lên
-// đến lúc query thì lỗi 500 khó truy hơn lỗi boot rõ ràng.
+// NewResolver constructs the root resolver with application services.
 func NewResolver(
 	srs *srsapp.Service,
 	content *contentapp.Service,

@@ -9,46 +9,34 @@ import (
 	"time"
 
 	domain "langapp/internal/domain/content"
+	"langapp/internal/typednil"
 )
 
-// Service là use case của context content. 1 struct cho cả dict / seed / tone
-// / THIEU vì chúng dùng chung repository + uow + clock; tách 4 struct chỉ tăng
-// file mà không tách được trách nhiệm nào.
+// Service orchestrates content use cases: dictionaries, seeding, tone drills, and THIEU checklists.
 type Service struct {
-	repo Repository
-	uow  UnitOfWork
-	// decks là cầu nối sang bounded context srs (tạo deck/thẻ seed, ghi tone).
+	repo  Repository
+	uow   UnitOfWork
 	decks DeckWriter
 	tone  CardToneWriter
 	cards CardReader
-	// data là nguồn nội dung bundle sẵn (HSK, en_dict, PVO/TMRND, bút thuận,
-	// bài đọc). Tách khỏi Repository vì đây là dữ liệu tĩnh, không phải DB.
-	data StaticContent
-	now  NowFunc
+	data  StaticContent
+	now   NowFunc
 }
 
-// StaticContent là dữ liệu học thuật bundle trong code (không nằm trong DB).
-// Khai ở đây để application không import tầng hạ tầng; dữ liệu thật nằm ở
-// tầng hạ tầng, package `contentinfra` (port từ api/*.go v1).
+// StaticContent provides bundled static academic content.
 type StaticContent interface {
-	// HskSeedByLevel trả seed từ vựng của 1 level HSK (nil = chưa có seed).
 	HskSeedByLevel(level string) []StaticHskEntry
-	// EnDict là từ điển tiếng Anh tích hợp.
 	EnDict() []StaticENEntry
-	// PVO / TMRND là 2 nhóm thẻ seed tiếng Anh.
 	PVO() []StaticSeedCard
 	PVOT82() []StaticSeedCard
 	TMRND() []StaticSeedCard
 	TMRNDT82() []StaticSeedCard
-	// StrokeIndex là index nhẹ 1 level; LookupStroke trả chi tiết từng chữ.
 	StrokeIndex(level string) []StaticStrokeIndex
 	LookupStroke(level, hanzi string) (StaticStrokeInfo, bool)
-	// ReaderArticles lọc theo level + id (rỗng = không lọc).
 	ReaderArticles(level, id string) []StaticReaderArticle
 }
 
-// Static* là DTO của dữ liệu tĩnh. Khai cục bộ ở application (không dùng
-// struct của infrastructure) để hướng phụ thuộc vẫn 1 chiều.
+// StaticHskEntry represents a static HSK seed dictionary entry.
 type StaticHskEntry struct {
 	Hanzi  string
 	Pinyin string
@@ -57,6 +45,7 @@ type StaticHskEntry struct {
 	Tone   string
 }
 
+// StaticENEntry represents a static English dictionary entry.
 type StaticENEntry struct {
 	Lang    string
 	Term    string
@@ -64,6 +53,7 @@ type StaticENEntry struct {
 	Gloss   string
 }
 
+// StaticSeedCard represents a static English seed card.
 type StaticSeedCard struct {
 	Front  string
 	Back   string
@@ -71,11 +61,13 @@ type StaticSeedCard struct {
 	Stress string
 }
 
+// StaticStrokeIndex represents lightweight stroke metadata for a level.
 type StaticStrokeIndex struct {
 	Hanzi       string
 	StrokeCount int
 }
 
+// StaticStrokeInfo represents detailed character stroke steps.
 type StaticStrokeInfo struct {
 	Hanzi       string
 	PinyinMarks string
@@ -84,12 +76,14 @@ type StaticStrokeInfo struct {
 	Strokes     []StaticStrokeStep
 }
 
+// StaticStrokeStep represents an individual stroke drawing step.
 type StaticStrokeStep struct {
 	Order int
 	Code  string
 	Name  string
 }
 
+// StaticReaderArticle represents a graded reader article.
 type StaticReaderArticle struct {
 	ID     string
 	Level  string
@@ -99,8 +93,7 @@ type StaticReaderArticle struct {
 	Source string
 }
 
-// NewService dựng service. nowFn nil → UTC thật. `data` nil thì các use case
-// đọc dữ liệu tĩnh trả lỗi tường minh thay vì panic.
+// NewService constructs a content service. Defaults to Clock if nowFn is nil.
 func NewService(repo Repository, uow UnitOfWork, decks DeckWriter, tone CardToneWriter,
 	cards CardReader, data StaticContent, nowFn NowFunc) *Service {
 	if nowFn == nil {
@@ -110,20 +103,11 @@ func NewService(repo Repository, uow UnitOfWork, decks DeckWriter, tone CardTone
 		data: data, now: nowFn}
 }
 
-// ── Tra từ điển ─────────────────────────────────────────────────────────────
 
-// DefaultSearchLimit là số kết quả mặc định — khớp `DEFAULT` của hàm SQL
-// `dict_search`/`en_dict_search` (M1 ghi rõ dict_search cũ từng default 20 là
-// lệch với LIMIT của caller v1).
+// DefaultSearchLimit is the default result limit for dictionary queries.
 const DefaultSearchLimit = 10
 
-// SearchDict tra từ điển Trung (hanzi/pinyin/nghia).
-//
-// Hạn chế CẦN GHI RÕ cho UI (đã document ở STACK-V2-PLAN §4.2): `to_tsvector`
-// với config `simple` coi cả chuỗi Hán là MỘT token, nên tra Hán đa ký tự đi
-// qua đường `ILIKE` chứ không qua `@@`. Tra 1 ký tự Hán vẫn ra kết quả
-// (đường ILIKE), nhưng KHÔNG phải do Postgres mạnh hơn FTS5 — app v1 với
-// SQLite FTS5 cũng trả `[]` cho cả `MATCH '你好'` lẫn `MATCH '你'`.
+// SearchDict searches the Chinese dictionary by hanzi, pinyin, or translation.
 func (s *Service) SearchDict(ctx context.Context, q string, limit int) ([]ZHEntry, error) {
 	query := strings.TrimSpace(q)
 	if query == "" {
@@ -132,7 +116,7 @@ func (s *Service) SearchDict(ctx context.Context, q string, limit int) ([]ZHEntr
 	return s.repo.SearchZH(ctx, query, clampLimit(limit, DefaultSearchLimit, 50))
 }
 
-// SearchEnglish tra từ điển Anh (headword/IPA/nghĩa).
+// SearchEnglish searches the English dictionary by headword or meaning.
 func (s *Service) SearchEnglish(ctx context.Context, q string, limit int) ([]ENEntry, error) {
 	query := strings.TrimSpace(q)
 	if query == "" {
@@ -141,8 +125,7 @@ func (s *Service) SearchEnglish(ctx context.Context, q string, limit int) ([]ENE
 	return s.repo.SearchEN(ctx, query, clampLimit(limit, DefaultSearchLimit, 50))
 }
 
-// LookupStress tra trọng âm 1 từ: ưu tiên tra từ điển, không có thì rơi về bộ
-// quy tắc hậu tố (luôn gắn cờ `exception` để UI nói rõ đây là đoán).
+// LookupStress looks up word stress from the dictionary or falls back to suffix rules.
 func (s *Service) LookupStress(ctx context.Context, word string) (domain.StressResult, error) {
 	key := strings.TrimSpace(word)
 	if key == "" {
@@ -152,16 +135,12 @@ func (s *Service) LookupStress(ctx context.Context, word string) (domain.StressR
 	if err != nil {
 		return domain.StressResult{}, fmt.Errorf("tra en_dict: %w", err)
 	}
-	// `lower(term) = lower(?)` trả về term gốc trong DB (giữ hoa/thường như lúc
-	// seed); domain dùng key đã hạ chữ thường để tra bảng ngoại lệ.
 	return domain.LookupStress(key, domain.EnglishEntry{
 		Term: e.Term, Reading: e.Reading,
 	}, found), nil
 }
 
-// UpsertDictEntry thêm/sửa 1 mục từ điển. Idempotent theo chữ Hán: chữ đã có
-// thì KHÔNG ghi đè nội dung cũ (người dùng sửa nghĩa thì import lại không được
-// xoá) — hành vi port từ ZhImportHandler v1.
+// UpsertDictEntry inserts a Chinese dictionary entry idempotently without overwriting existing terms.
 func (s *Service) UpsertDictEntry(ctx context.Context, e ZHEntry) (ZHEntry, bool, error) {
 	hanzi := strings.TrimSpace(e.Hanzi)
 	if hanzi == "" {
@@ -194,17 +173,14 @@ func (s *Service) UpsertDictEntry(ctx context.Context, e ZHEntry) (ZHEntry, bool
 	return ZHEntry{Hanzi: hanzi, Pinyin: e.Pinyin, Nghia: e.Nghia}, inserted, nil
 }
 
-// ── Nét chữ ─────────────────────────────────────────────────────────────────
-
-// GetStrokes trả index nhẹ của 1 level, hoặc chi tiết 1 chữ khi `hanzi` khác
-// rỗng. Chưa có dữ liệu chữ đó (hoặc thuộc level khác) → 404.
-func (s *Service) GetStrokes(ctx context.Context, level, hanzi string) ([]StaticStrokeIndex, StaticStrokeInfo, error) {
-	if s.data == nil {
+// Strokes returns lightweight stroke index or detailed stroke steps for a character.
+func (s *Service) Strokes(ctx context.Context, level, hanzi string) ([]StaticStrokeIndex, StaticStrokeInfo, error) {
+	if typednil.Is(s.data) {
 		return nil, StaticStrokeInfo{}, errors.New("chưa cấu hình nguồn dữ liệu nét chữ")
 	}
 	lvl := strings.TrimSpace(level)
 	if lvl == "" {
-		lvl = "HSK1" // mặc định port từ ZhStrokesHandler v1
+		lvl = "HSK1"
 	}
 	h := strings.TrimSpace(hanzi)
 	if h == "" {
@@ -217,20 +193,15 @@ func (s *Service) GetStrokes(ctx context.Context, level, hanzi string) ([]Static
 	return nil, info, nil
 }
 
-// ── Bài đọc ─────────────────────────────────────────────────────────────────
-
-// GetReaderArticles trả bài đọc lọc theo level và id (rỗng = không lọc).
-func (s *Service) GetReaderArticles(ctx context.Context, level, id string) ([]StaticReaderArticle, error) {
-	if s.data == nil {
+// ReaderArticles returns graded reader articles filtered by level and ID.
+func (s *Service) ReaderArticles(ctx context.Context, level, id string) ([]StaticReaderArticle, error) {
+	if typednil.Is(s.data) {
 		return nil, errors.New("chưa cấu hình nguồn dữ liệu bài đọc")
 	}
 	return s.data.ReaderArticles(strings.TrimSpace(level), strings.TrimSpace(id)), nil
 }
 
-// ── Chunking ────────────────────────────────────────────────────────────────
-
-// Chunk tách câu thành từ nội dung / từ chức năng — quy tắc nằm ở
-// domain/content.SplitChunks, tầng này chỉ validate input.
+// Chunk splits a sentence into content and function words.
 func (s *Service) Chunk(ctx context.Context, sentence string) ([]domain.Chunk, error) {
 	if strings.TrimSpace(sentence) == "" {
 		return nil, newError(StatusBadRequest, "câu rỗng")
@@ -238,11 +209,7 @@ func (s *Service) Chunk(ctx context.Context, sentence string) ([]domain.Chunk, e
 	return domain.SplitChunks(sentence), nil
 }
 
-// ── Thanh điệu ──────────────────────────────────────────────────────────────
-
-// GradeTonePair chấm đáp án drill so với mẫu. Toàn bộ quy tắc nằm ở
-// domain/content.GradeTonePair (bảng thang điệu) — tầng này chỉ dịch lỗi
-// thuần sang 400.
+// GradeTonePair compares answered tones with expected pattern and grades the drill.
 func (s *Service) GradeTonePair(expected, answered string) (domain.ToneGradeResult, error) {
 	if strings.TrimSpace(expected) == "" {
 		return domain.ToneGradeResult{}, newError(StatusBadRequest, "thiếu thanh mẫu")
@@ -254,15 +221,12 @@ func (s *Service) GradeTonePair(expected, answered string) (domain.ToneGradeResu
 	return res, nil
 }
 
-// SetTone ghi kết quả chấm thanh vào thẻ qua port sang `srs`.
-//
-// Bước CHẤM thuộc context này (bảng thang điệu), bước GHI thuộc `srs` (bảng
-// `cards`) — đó là lý do `srs.Service.SetCardTone` ở M2 chỉ nhận tone đã chấm.
+// SetTone records validated tone patterns to card metadata via SRS port.
 func (s *Service) SetTone(ctx context.Context, cardID int64, tone string) (string, error) {
 	if cardID <= 0 {
 		return "", newError(StatusBadRequest, "id thẻ không hợp lệ")
 	}
-	if s.tone == nil {
+	if typednil.Is(s.tone) {
 		return "", errors.New("chưa cấu hình cổng ghi thanh điệu")
 	}
 	t := strings.TrimSpace(tone)
@@ -297,7 +261,7 @@ type ImportInput struct {
 	Deck string
 }
 
-// ImportResult là báo cáo import, giữ nguyên 5 trường mà endpoint v1 trả.
+// ImportResult reports HSK import counts.
 type ImportResult struct {
 	DeckID     int64
 	Deck       string
@@ -307,15 +271,7 @@ type ImportResult struct {
 	DictAdded  int
 }
 
-// ImportHSK nạp seed từ vựng 1 level HSK vào 1 deck + bảng dict.
-//
-// IDEMPOTENT theo 2 khoá: deck theo tên, thẻ theo (deck, front), từ điển theo
-// chữ Hán. Chạy 2 lần lần thứ 2 phải báo `cards_added = 0` và `dict_added = 0`
-// mà tổng số thẻ không đổi.
-//
-// Toàn bộ nằm trong 1 transaction: crash giữa chừng để lại deck rỗng rồi lần
-// import sau tưởng đã xong (COUNT check `ux_cards_deck_front` lúc đó vẫn
-// chạy) — đúng lý do M2 đặt `UnitOfWork` làm ranh giới bắt buộc.
+// ImportHSK imports vocabulary entries for an HSK level into a deck and dictionary table.
 func (s *Service) ImportHSK(ctx context.Context, in ImportInput) (ImportResult, error) {
 	level := strings.TrimSpace(in.Level)
 	if level == "" {
@@ -329,7 +285,7 @@ func (s *Service) ImportHSK(ctx context.Context, in ImportInput) (ImportResult, 
 		return ImportResult{}, newError(StatusBadRequest,
 			"deck HSK phải trùng level (dùng deck mặc định %s)", level)
 	}
-	if s.data == nil {
+	if typednil.Is(s.data) {
 		return ImportResult{}, errors.New("chưa cấu hình nguồn seed HSK")
 	}
 	entries := s.data.HskSeedByLevel(level)
@@ -391,8 +347,7 @@ func (s *Service) ImportHSK(ctx context.Context, in ImportInput) (ImportResult, 
 	return out, nil
 }
 
-// wrapSeedErr dịch sentinel của use case seed thành *Error có status đúng:
-// sai ngôn ngữ deck là 400 (input sai), còn lỗi kỹ thuật đi nguyên vẹn.
+// wrapSeedErr translates seed domain errors to application errors.
 func wrapSeedErr(err error) error {
 	if errors.Is(err, ErrLangMismatch) {
 		return newError(StatusBadRequest, "deck đã tồn tại nhưng không phải tiếng Trung")
@@ -403,19 +358,16 @@ func wrapSeedErr(err error) error {
 	return err
 }
 
-// ── Seed tiếng Anh ──────────────────────────────────────────────────────────
-
-// EnglishSeedResult là báo cáo seed tiếng Anh (3 số, giữ nguyên v1).
+// EnglishSeedResult reports English seed statistics.
 type EnglishSeedResult struct {
 	EnDict     int
 	PVOAdded   int
 	TMRNDAdded int
 }
 
-// SeedEnglish nạp en_dict tích hợp + 2 deck PVO/TMRND. Idempotent toàn bộ:
-// lần 2 không thêm gì.
+// SeedEnglish seeds the integrated English dictionary and PVO/TMRND decks.
 func (s *Service) SeedEnglish(ctx context.Context) (EnglishSeedResult, error) {
-	if s.data == nil {
+	if typednil.Is(s.data) {
 		return EnglishSeedResult{}, errors.New("chưa cấu hình nguồn seed tiếng Anh")
 	}
 	now := s.now().UTC()
@@ -424,8 +376,6 @@ func (s *Service) SeedEnglish(ctx context.Context) (EnglishSeedResult, error) {
 	var out EnglishSeedResult
 
 	err := s.inTx(ctx, func(tx Tx) error {
-		// en_dict chỉ seed khi bảng TRỐNG: nếu đã có dòng nào thì user đã sửa
-		// hoặc peer đã merge vào — nạp thêm chỉ tạo entry trùng.
 		dictCount, err := s.repo.CountEN(ctx)
 		if err != nil {
 			return err
@@ -461,7 +411,6 @@ func (s *Service) SeedEnglish(ctx context.Context) (EnglishSeedResult, error) {
 	return out, nil
 }
 
-// seedDeck nạp 1 nhóm thẻ seed vào deck tên `name`, trả số thẻ MỚI thêm.
 func (s *Service) seedDeck(ctx context.Context, tx Tx, name, lang string,
 	cards []StaticSeedCard, ts, due string) (int, error) {
 	ref, err := s.decks.EnsureSeedDeck(ctx, tx, name, lang, SeedDeckGUID(name, lang), ts)
@@ -486,24 +435,17 @@ func (s *Service) seedDeck(ctx context.Context, tx Tx, name, lang string,
 	return added, nil
 }
 
-// ── THIEU ───────────────────────────────────────────────────────────────────
-
-// THIEUPrefix là prefix reserved của context content trong `notes.text`.
-// `srs` từ chối note user dùng prefix này (api/decks.go v1), và `practice`
-// dùng 2 prefix riêng (SHADOW|/ERR|) — không trùng nhau.
+// THIEUPrefix is the reserved notes prefix for THIEU self-assessment checklists.
 const THIEUPrefix = "THIEU|"
 
-// ThieuInput là input AppendThieu.
+// ThieuInput holds parameters for AppendThieu.
 type ThieuInput struct {
-	// Session rỗng = ngày UTC hôm nay (YYYY-MM-DD), giữ hành vi v1.
 	Session string
-	// Scores là điểm 8 trục A-H, thang 1-5. Thiếu trục nào cũng 400 — bản
-	// chấm 4/8 trục không có nghĩa với checklist "đánh giá buổi luyện".
-	Scores map[string]int
-	Note   string
+	Scores  map[string]int
+	Note    string
 }
 
-// ThieuSession là 1 buổi chấm checklist đã đọc lại từ note.
+// ThieuSession represents a recorded checklist evaluation session.
 type ThieuSession struct {
 	ID        int64
 	Session   string
@@ -513,14 +455,12 @@ type ThieuSession struct {
 	CreatedAt string
 }
 
-// ListThieuAxes trả 8 trục A-H kèm rubric tiếng Việt.
+// ListThieuAxes returns all 8 checklist evaluation axes.
 func (s *Service) ListThieuAxes() []domain.THIEUAxis {
 	return domain.THIEUAxes
 }
 
-// AppendThieu lưu 1 buổi chấm checklist vào `notes` (card_id NULL + prefix
-// THIEU|). Không thêm bảng/cột: contract v4 giữ nguyên, và nhờ đó note THIEU
-// merge được cùng mọi note khác (union theo guid).
+// AppendThieu appends a checklist evaluation note.
 func (s *Service) AppendThieu(ctx context.Context, in ThieuInput) (ThieuSession, error) {
 	if len(in.Scores) != len(domain.THIEUAxes) {
 		return ThieuSession{}, newError(StatusBadRequest, "thiếu điểm: cần đủ 8 trục A-H")
@@ -560,11 +500,10 @@ func (s *Service) AppendThieu(ctx context.Context, in ThieuInput) (ThieuSession,
 	}, nil
 }
 
-// ListThieuLimit là số buổi chấm tối đa trả về — giữ nguyên LIMIT 60 của v1.
+// ListThieuLimit is the maximum number of checklist sessions returned.
 const ListThieuLimit = 60
 
-// ListThieu trả lịch sử chấm checklist, mới nhất trước. Note hỏng (JSON
-// không parse được) bị bỏ qua thay vì làm hỏng cả danh sách.
+// ListThieu returns checklist evaluation history, latest first.
 func (s *Service) ListThieu(ctx context.Context) ([]ThieuSession, error) {
 	notes, err := s.repo.ListNotesByPrefix(ctx, THIEUPrefix, ListThieuLimit)
 	if err != nil {
@@ -581,7 +520,6 @@ func (s *Service) ListThieu(ctx context.Context) ([]ThieuSession, error) {
 	return out, nil
 }
 
-// parseThieuNote giải 1 note THIEU| về ThieuSession. ok=false nếu payload hỏng.
 func parseThieuNote(n Note) (ThieuSession, bool) {
 	var payload struct {
 		Session string         `json:"session"`
@@ -602,19 +540,15 @@ func parseThieuNote(n Note) (ThieuSession, bool) {
 	}, true
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
 func (s *Service) timestamp() string { return s.now().UTC().Format(time.RFC3339) }
 
-// inTx chạy fn trong UnitOfWork; uow nil (test chỉ cần validate) → chạy thẳng.
 func (s *Service) inTx(ctx context.Context, fn func(tx Tx) error) error {
-	if s.uow == nil {
+	if typednil.Is(s.uow) {
 		return fn(nil)
 	}
 	return s.uow.Do(ctx, fn)
 }
 
-// clampLimit giữ limit trong [lo, hi]; <= 0 dùng mặc định.
 func clampLimit(limit, def, hi int) int {
 	if limit <= 0 {
 		return def

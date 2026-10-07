@@ -7,11 +7,7 @@ import (
 	app "langapp/internal/application/sync"
 )
 
-// File này hiện thực phần GHI của merge cho cây `roadmap_*` + `roadmap_bookmarks`
-// và phần APPEND cho `reviews` / `notes`.
-//
-// Cùng luật với file trước: set `updated_at` TƯỜNG MINH (không `Omit`), mọi
-// UPDATE có `WHERE id = ?`, cột NULL giữ nguyên kiểu con trỏ.
+// Write implementation of merge for roadmap trees and append-only tables.
 
 // ── roadmap_paths ───────────────────────────────────────────────────────────
 
@@ -28,9 +24,10 @@ type pathMergeRow struct {
 	Deleted   int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for pathMergeRow.
 func (pathMergeRow) TableName() string { return "roadmap_paths" }
 
+// PathRows returns all roadmap paths by GUID.
 func (r *Repository) PathRows(ctx context.Context, tx app.Tx) (map[string]app.PathRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -54,6 +51,7 @@ func (r *Repository) PathRows(ctx context.Context, tx app.Tx) (map[string]app.Pa
 	return out, nil
 }
 
+// UpsertPath inserts or updates a roadmap path.
 func (r *Repository) UpsertPath(ctx context.Context, tx app.Tx, p app.PathRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -101,9 +99,10 @@ type stageMergeRow struct {
 	Deleted       int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for stageMergeRow.
 func (stageMergeRow) TableName() string { return "roadmap_stages" }
 
+// StageRows returns all roadmap stages by GUID.
 func (r *Repository) StageRows(ctx context.Context, tx app.Tx) (map[string]app.StageRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -134,9 +133,6 @@ func (r *Repository) StageRows(ctx context.Context, tx app.Tx) (map[string]app.S
 			Terrain: row.Terrain, Direction: row.Direction,
 			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Deleted: row.Deleted,
 		}
-		// `deck_id` NULL = stage chưa gắn deck. Luôn trả con trỏ NON-NIL (trỏ
-		// tới chuỗi rỗng) vì bản LOCAL luôn biết `deck_id` của chính nó —
-		// đây là giá trị peer sẽ được so sánh, không phải giá trị cần ghi.
 		s.DeckGUID = new(string)
 		if row.DeckID != nil {
 			if g, ok := deckGUID[*row.DeckID]; ok {
@@ -148,20 +144,16 @@ func (r *Repository) StageRows(ctx context.Context, tx app.Tx) (map[string]app.S
 	return out, nil
 }
 
+// UpsertStage inserts or updates a roadmap stage.
 func (r *Repository) UpsertStage(ctx context.Context, tx app.Tx, s app.StageRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
 		return 0, false, err
 	}
-	// `path_id` FK bắt buộc; `deck_id` NULL được phép (ON DELETE SET NULL).
 	pathID, err := r.resolve(ctx, db, "roadmap_paths", s.PathGUID)
 	if err != nil {
 		return 0, false, fmt.Errorf("resolve path cha của stage %s: %w", s.GUID, err)
 	}
-	// `s.DeckGUID == nil` ⇒ incoming KHÔNG mang thông tin deck: để `deckID`
-	// nil và KHÔNG đụng cột. Nếu resolve vô điều kiện này thì mọi stage sẽ bị
-	// ghi `deck_id = NULL` — chết feature A1 (bấm stage nhảy `/review`) sau
-	// sync đầu tiên, đúng finding B1 của cổng Oracle M3.
 	var deckID *int64
 	if s.DeckGUID != nil && *s.DeckGUID != "" {
 		d, err := r.resolve(ctx, db, "decks", *s.DeckGUID)
@@ -187,7 +179,6 @@ func (r *Repository) UpsertStage(ctx context.Context, tx app.Tx, s app.StageRow,
 		return 0, false, fmt.Errorf("update roadmap_stages %s nhưng thiếu id local", s.GUID)
 	}
 	if s.DeckGUID == nil {
-		// Không có thông tin deck ⇒ giữ nguyên `deck_id` local, đừng ghi NULL.
 		err = db.Exec(`UPDATE roadmap_stages SET path_id = ?, slug = ?, title = ?, goal = ?,
 			position = ?, duration_weeks = ?, status = ?, status_note = ?, deleted = ?,
 			updated_at = ?, completed_at = ?, terrain = ?, direction = ?
@@ -218,9 +209,10 @@ type milestoneMergeRow struct {
 	Deleted   int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for milestoneMergeRow.
 func (milestoneMergeRow) TableName() string { return "roadmap_milestones" }
 
+// MilestoneRows returns all roadmap milestones by GUID.
 func (r *Repository) MilestoneRows(ctx context.Context, tx app.Tx) (map[string]app.MilestoneRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -248,6 +240,7 @@ func (r *Repository) MilestoneRows(ctx context.Context, tx app.Tx) (map[string]a
 	return out, nil
 }
 
+// UpsertMilestone inserts or updates a roadmap milestone.
 func (r *Repository) UpsertMilestone(ctx context.Context, tx app.Tx, m app.MilestoneRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -297,9 +290,10 @@ type topicMergeRow struct {
 	Deleted     int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for topicMergeRow.
 func (topicMergeRow) TableName() string { return "roadmap_topics" }
 
+// TopicRows returns all roadmap topics by GUID.
 func (r *Repository) TopicRows(ctx context.Context, tx app.Tx) (map[string]app.TopicRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -330,6 +324,7 @@ func (r *Repository) TopicRows(ctx context.Context, tx app.Tx) (map[string]app.T
 	return out, nil
 }
 
+// UpsertTopic inserts or updates a roadmap topic.
 func (r *Repository) UpsertTopic(ctx context.Context, tx app.Tx, tp app.TopicRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -379,9 +374,10 @@ type resourceMergeRow struct {
 	Deleted   int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for resourceMergeRow.
 func (resourceMergeRow) TableName() string { return "roadmap_resources" }
 
+// ResourceRows returns all roadmap resources by GUID.
 func (r *Repository) ResourceRows(ctx context.Context, tx app.Tx) (map[string]app.ResourceRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -409,6 +405,7 @@ func (r *Repository) ResourceRows(ctx context.Context, tx app.Tx) (map[string]ap
 	return out, nil
 }
 
+// UpsertResource inserts or updates a roadmap resource.
 func (r *Repository) UpsertResource(ctx context.Context, tx app.Tx, res app.ResourceRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -454,9 +451,10 @@ type bookmarkMergeRow struct {
 	Deleted   int
 }
 
-// TableName khoá tên bảng — GORM đoán tên từ tên struct, sai.
+// TableName returns the table name for bookmarkMergeRow.
 func (bookmarkMergeRow) TableName() string { return "roadmap_bookmarks" }
 
+// BookmarkRows returns all roadmap bookmarks by GUID.
 func (r *Repository) BookmarkRows(ctx context.Context, tx app.Tx) (map[string]app.BookmarkRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -480,6 +478,7 @@ func (r *Repository) BookmarkRows(ctx context.Context, tx app.Tx) (map[string]ap
 	return out, nil
 }
 
+// UpsertBookmark inserts or updates a roadmap bookmark.
 func (r *Repository) UpsertBookmark(ctx context.Context, tx app.Tx, b app.BookmarkRow, found bool) (id int64, skipped bool, err error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -507,7 +506,7 @@ func (r *Repository) UpsertBookmark(ctx context.Context, tx app.Tx, b app.Bookma
 
 // ── reviews / notes (append-only) ───────────────────────────────────────────
 
-// ReviewGUIDs trả tập guid review đã có (dedupe khi union).
+// ReviewGUIDs returns the set of existing review GUIDs.
 func (r *Repository) ReviewGUIDs(ctx context.Context, tx app.Tx) (map[string]bool, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -526,9 +525,7 @@ func (r *Repository) ReviewGUIDs(ctx context.Context, tx app.Tx) (map[string]boo
 	return out, nil
 }
 
-// AppendReview chèn 1 review. `ON CONFLICT (guid) DO NOTHING` là dịch
-// `INSERT OR IGNORE` của SQLite — merge chạy 2 lần phải cho kết quả giống
-// nhau, không phải lỗi unique.
+// AppendReview inserts a review row, ignoring conflicts on GUID.
 func (r *Repository) AppendReview(ctx context.Context, tx app.Tx, rev app.ReviewRow) (bool, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -545,11 +542,7 @@ func (r *Repository) AppendReview(ctx context.Context, tx app.Tx, rev app.Review
 	return res.RowsAffected > 0, nil
 }
 
-// ReviewsOfCard đọc lịch sử ôn theo (reviewed_at, id).
-//
-// `id` là thứ tự khớp tuyệt đối khi 2 review trùng `reviewed_at` (thường xảy
-// ra khi 2 máy ôn cùng lúc): không có nó, `Replay` cho kết quả khác nhau ở 2
-// máy và hội tụ hỏng.
+// ReviewsOfCard returns the review history for a card ordered by reviewed_at and ID.
 func (r *Repository) ReviewsOfCard(ctx context.Context, tx app.Tx, cardID int64) ([]app.ReplayReview, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -564,7 +557,7 @@ func (r *Repository) ReviewsOfCard(ctx context.Context, tx app.Tx, cardID int64)
 	return rows, nil
 }
 
-// ReplayCard ghi lịch tính lại, `updated_at` tường minh.
+// ReplayCard updates card review parameters with an explicit timestamp.
 func (r *Repository) ReplayCard(ctx context.Context, tx app.Tx, cardID int64, res app.ReplayResult, now string) error {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -577,7 +570,7 @@ func (r *Repository) ReplayCard(ctx context.Context, tx app.Tx, cardID int64, re
 		res.Reps, res.Lapses, res.Stability, res.Difficulty, res.DueAt, now, cardID).Error
 }
 
-// NoteGUIDs trả tập guid note đã có.
+// NoteGUIDs returns the set of existing note GUIDs.
 func (r *Repository) NoteGUIDs(ctx context.Context, tx app.Tx) (map[string]bool, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -596,8 +589,7 @@ func (r *Repository) NoteGUIDs(ctx context.Context, tx app.Tx) (map[string]bool,
 	return out, nil
 }
 
-// AppendNote chèn 1 note. `CardID` nil = note không gắn thẻ (checklist THIEU,
-// lỗi luyện tự do) — ghi SQL NULL thật, không phải chuỗi rỗng.
+// AppendNote inserts a note row, ignoring conflicts on GUID.
 func (r *Repository) AppendNote(ctx context.Context, tx app.Tx, n app.NoteRow) (bool, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {

@@ -406,15 +406,15 @@ func Test_reader_articles_are_bundled_and_filterable(t *testing.T) {
 	svc := newService(t, newTestDB(t))
 	ctx := context.Background()
 
-	all, err := svc.GetReaderArticles(ctx, "", "")
+	all, err := svc.ReaderArticles(ctx, "", "")
 	require.NoError(t, err)
 	assert.Len(t, all, 8, "8 bài bundle (2 bài × HSK1/HSK2/A1/A2)")
 
-	zh, err := svc.GetReaderArticles(ctx, "HSK1", "")
+	zh, err := svc.ReaderArticles(ctx, "HSK1", "")
 	require.NoError(t, err)
 	assert.Len(t, zh, 2)
 
-	one, err := svc.GetReaderArticles(ctx, "", "a1-1")
+	one, err := svc.ReaderArticles(ctx, "", "a1-1")
 	require.NoError(t, err)
 	require.Len(t, one, 1)
 	assert.NotEmpty(t, one[0].Text)
@@ -425,7 +425,7 @@ func Test_stroke_data_lookup_matches_level(t *testing.T) {
 	svc := newService(t, newTestDB(t))
 	ctx := context.Background()
 
-	_, detail, err := svc.GetStrokes(ctx, "HSK1", "好")
+	_, detail, err := svc.Strokes(ctx, "HSK1", "好")
 	require.NoError(t, err)
 	assert.Equal(t, "好", detail.Hanzi)
 	assert.Equal(t, 6, detail.StrokeCount)
@@ -435,11 +435,11 @@ func Test_stroke_data_lookup_matches_level(t *testing.T) {
 		assert.NotEmpty(t, step.Code)
 	}
 
-	idx, _, err := svc.GetStrokes(ctx, "HSK1", "")
+	idx, _, err := svc.Strokes(ctx, "HSK1", "")
 	require.NoError(t, err)
 	assert.Len(t, idx, 12, "index level HSK1 có 12 chữ")
 
-	_, _, err = svc.GetStrokes(ctx, "HSK2", "好")
+	_, _, err = svc.Strokes(ctx, "HSK2", "好")
 	require.Error(t, err, "chữ thuộc level khác không được trả về")
 }
 

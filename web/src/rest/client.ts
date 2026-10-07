@@ -1,14 +1,16 @@
-// M5 — client cho 5 endpoint REST còn lại. KHÔNG có endpoint JSON nào khác:
+// M5 — client cho 3 endpoint REST còn lại. KHÔNG có endpoint JSON nào khác:
 // mọi thứ JSON đã sang GraphQL (xem `internal/transport/http/routes.go` của
 // app-v2 — cố ý không có để client không quay lại gọi tuần tự).
 //
 //   GET  /api/health    ping DB + trạng thái engine audio
 //   GET  /api/tts       stream WAV + header `X-Engine`
 //   POST /api/stt       multipart `audio` → JSON transcript
-//   GET  /api/backup    501 cho tới M7 (`pg_dump` chưa có trong image)
-//   POST /api/restore   501 cho tới M7
 //
-// Hợp đồng lỗi của cả 5 endpoint là `{"error": "<tiếng Việt>"}` (xem
+// (`/api/backup` + `/api/restore` ĐÃ BỊ GỠ khỏi server: `BackupPort` chưa bao
+// giờ có hiện thực nên 2 endpoint ấy chỉ trả 501 — 1 nút bấm luôn lỗi. Xem
+// `phases/task-memory/remove-backup-restore.md`.)
+//
+// Hợp đồng lỗi của cả 3 endpoint là `{"error": "<tiếng Việt>"}` (xem
 // `internal/transport/http/errors.go` — `writeJSONError`), giống hệt app v1 ⇒
 // client đọc lỗi y hệt cũ, không phải dịch lại.
 import { AppError } from '../graphql/errors';
@@ -57,10 +59,6 @@ export function buildTTSUrl(text: string, base = getApiBase()): string {
   return `${base}/api/tts?text=${encodeURIComponent(text)}`;
 }
 
-export function buildBackupUrl(base = getApiBase()): string {
-  return `${base}/api/backup`;
-}
-
 export async function fetchHealth(base = getApiBase()): Promise<HealthResult> {
   const res = await fetch(`${base}/api/health`);
   await throwIfNotOk(res, `health ${res.status}`);
@@ -87,31 +85,4 @@ export async function uploadSTT(audio: Blob, base = getApiBase()): Promise<STTRe
   const data = (await res.json()) as STTResult;
   const header = res.headers?.get?.('X-Engine') ?? null;
   return { ...data, engineHeader: header ?? data.engine };
-}
-
-/**
- * Tải backup. **Trả 501 tới M7** — app-v2 chưa implement `BackupPort` (Postgres
- * không có `VACUUM INTO`, cần `pg_dump`/`pg_restore` thuộc M7). Hàm này ném
- * `AppError` mang message tiếng Việt của server; UI phải hiện đúng message đó
- * chứ không được báo "đã tải xong".
- */
-export async function downloadBackup(base = getApiBase()): Promise<Blob> {
-  const res = await fetch(buildBackupUrl(base));
-  await throwIfNotOk(res, `backup ${res.status}`);
-  return res.blob();
-}
-
-export interface RestoreResult {
-  ok: boolean;
-  restored?: number;
-  restored_tables?: string[];
-}
-
-/** Nạp lại snapshot. **Trả 501 tới M7** — xem `downloadBackup`. */
-export async function uploadRestore(file: File | Blob, base = getApiBase()): Promise<RestoreResult> {
-  const form = new FormData();
-  form.append('file', file, 'langapp-backup.dump');
-  const res = await fetch(`${base}/api/restore`, { method: 'POST', body: form });
-  await throwIfNotOk(res, `restore ${res.status}`);
-  return (await res.json()) as RestoreResult;
 }

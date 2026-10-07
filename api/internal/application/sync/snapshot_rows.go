@@ -7,18 +7,7 @@ import (
 	domain "langapp/internal/domain/sync"
 )
 
-// File này chuyển `domain.PeerSnapshot.Rows` (payload dạng `map[string]string`)
-// thành DTO có kiểu của application, theo từng bảng.
-//
-// VÌ SAO CẦN: `domain/sync.Row` là dạng generic để `Decide` so sánh được mọi
-// bảng, nhưng DTO có kiểu mới cho tầng application biết `completed_at` là
-// `*string`, `map_x` là `*float64` (NULL ≠ 0) và `deck_id` cần remap. Ép
-// generic vào SQL sẽ biến NULL thành chuỗi rỗng — mất đúng cái phân biệt mà
-// `tombstone`/`map_x` phụ thuộc.
-//
-// Sắp xếp theo `guid` trước khi duyệt: `Rows` đến từ loader với thứ tự
-// không bảo đảm, còn thứ tự ghi phải xác định để 2 lần merge cùng snapshot
-// cho cùng kết quả.
+// snapshot_rows.go converts domain.PeerSnapshot.Rows into typed application DTOs.
 
 func v(m map[string]string, key string) string {
 	if m == nil {
@@ -135,9 +124,6 @@ func stageRowsFrom(s domain.PeerSnapshot) []StageRow {
 	rows := rowsOf(s.Rows, domain.TableRoadmapStages)
 	out := make([]StageRow, 0, len(rows))
 	for _, r := range rows {
-		// Luôn non-nil: loader ĐÃ đọc cột `deck_id`, nên "peer nói deck_id
-		// NULL" và "peer không nói gì" là 2 thông tin khác nhau — con trỏ
-		// nil báo điều thứ hai cho `UpsertStage` biết đừng đụng cột.
 		deckGUID := r.DeckGUID
 		out = append(out, StageRow{
 			GUID: r.GUID, PathGUID: r.ParentGUID,
@@ -145,12 +131,8 @@ func stageRowsFrom(s domain.PeerSnapshot) []StageRow {
 			Position: vi(r.Values, "position"), DurationWeeks: vi(r.Values, "duration_weeks"),
 			Status: v(r.Values, "status"), StatusNote: v(r.Values, "status_note"),
 			CompletedAt: vp(r.Values, "completed_at"),
-			// DeckGUID đọc từ `Row.DeckGUID` (FK đã resolve trong loader), KHÔNG
-			// phải từ `Values` — `deck_guid` không phải cột của bảng nên không
-			// có trong `snapshotColumns`, đọc ở đây luôn ra rỗng (nguyên nhân
-			// B1 của cổng Oracle M3).
-			DeckGUID: &deckGUID,
-			Terrain:  v(r.Values, "terrain"), Direction: v(r.Values, "direction"),
+			DeckGUID:    &deckGUID,
+			Terrain:     v(r.Values, "terrain"), Direction: v(r.Values, "direction"),
 			CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Deleted: r.Deleted,
 		})
 	}

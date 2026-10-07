@@ -131,7 +131,7 @@ func Test_record_shadow_progress_rejects_negative_loops(t *testing.T) {
 func Test_get_shadow_progress_returns_default_when_never_practised(t *testing.T) {
 	svc := newService(newFakeRepo())
 
-	got, err := svc.GetShadowProgress(context.Background(), 7)
+	got, err := svc.LoadShadowProgress(context.Background(), 7)
 	require.NoError(t, err)
 	assert.Equal(t, 0, got.Loops)
 	assert.Equal(t, 1.0, got.Rate)
@@ -146,7 +146,7 @@ func Test_get_shadow_progress_returns_latest_note(t *testing.T) {
 	_, err = svc.RecordShadowProgress(context.Background(), 7, 5, 0.75)
 	require.NoError(t, err)
 
-	got, err := svc.GetShadowProgress(context.Background(), 7)
+	got, err := svc.LoadShadowProgress(context.Background(), 7)
 	require.NoError(t, err)
 	assert.Equal(t, 5, got.Loops, "phải lấy note MỚI NHẤT")
 	assert.Equal(t, 0.75, got.Rate)
@@ -160,7 +160,7 @@ func Test_get_shadow_progress_ignores_corrupted_note(t *testing.T) {
 	}}
 	svc := newService(repo)
 
-	got, err := svc.GetShadowProgress(context.Background(), 7)
+	got, err := svc.LoadShadowProgress(context.Background(), 7)
 	require.NoError(t, err)
 	assert.Equal(t, 0, got.Loops, "note hỏng không được làm hỏng endpoint")
 }
@@ -174,7 +174,7 @@ func Test_diff_against_sample_normalises_traditional_before_comparing(t *testing
 
 	// STT trả "學習中文" (phồn), câu mẫu "学习中文" (giản). Không chuẩn hóa thì
 	// 4 từ đều sai dù đọc đúng — đây là bug v1 đã phải vá bằng `simplify.go`.
-	got, err := svc.DiffAgainstSample("学习中文", "學習中文")
+	got, err := svc.DiffAgainstSample(context.Background(), "学习中文", "學習中文")
 	require.NoError(t, err)
 	assert.Equal(t, "学习中文", got.Transcript, "transcript trả về phải là bản đã chuẩn hóa")
 	assert.Equal(t, 1.0, got.Score)
@@ -184,7 +184,7 @@ func Test_diff_against_sample_normalises_traditional_before_comparing(t *testing
 func Test_diff_against_sample_reports_wrong_words(t *testing.T) {
 	svc := newService(newFakeRepo())
 
-	got, err := svc.DiffAgainstSample("I want to make progress", "I want make progress")
+	got, err := svc.DiffAgainstSample(context.Background(), "I want to make progress", "I want make progress")
 	require.NoError(t, err)
 	assert.NotEqual(t, 1.0, got.Score)
 	// LCS khớp "make progress" và báo thiếu "to" — đúng hành vi port từ
@@ -195,7 +195,7 @@ func Test_diff_against_sample_reports_wrong_words(t *testing.T) {
 func Test_diff_against_sample_requires_sample(t *testing.T) {
 	svc := newService(newFakeRepo())
 
-	_, err := svc.DiffAgainstSample("  ", "x")
+	_, err := svc.DiffAgainstSample(context.Background(), "  ", "x")
 	require.Error(t, err)
 	var appErr *Error
 	require.ErrorAs(t, err, &appErr)

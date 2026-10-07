@@ -11,7 +11,11 @@ import (
 //
 // `TestMain` phải nằm trong package IN-PACKAGE (không phải `_test`) vì Go chỉ
 // cho phép 1 `TestMain` mỗi thư mục test — mà các thư mục này có cả test
-// in-package (cần `txHandle` không export) lẫn test external.
+// in-package (cần `txOf`, `cardRow`, `openTestDBForInternalTest` — không export) lẫn test external.
+//
+// Ghi chú 2026-10-02: comment cũ nói "cần `txHandle` không export" — symbol
+// đó đã bị xoá ở T11.1 (gom về `internal/platform/txtx`). Lý do in-package
+// vẫn đúng, chỉ là ví dụ phải là symbol còn tồn tại.
 //
 // Gate có hiệu lực cho MỌI test của thư mục, kể cả các file `*_test.go`
 // external, nên một chỗ đặt là đủ. Xem `testdb.Main` để biết vì sao thiếu DSN

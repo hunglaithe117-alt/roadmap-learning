@@ -40,24 +40,25 @@ type mergeRowSpec struct {
 // quên khai ở đây thì `Test_merge_rows_table_covers_every_roadmap_table` bắt
 // được.
 var mergeRowSpecs = []mergeRowSpec{
-	{deckMergeRow{}, domain.TableDecks, nil},
-	{cardMergeRow{}, domain.TableCards, []string{"deck_id"}},
-	{pathMergeRow{}, domain.TableRoadmapPaths, nil},
-	{stageMergeRow{}, domain.TableRoadmapStages, []string{"path_id", "deck_id"}},
-	{milestoneMergeRow{}, domain.TableRoadmapMilestones, []string{"stage_id"}},
-	{topicMergeRow{}, domain.TableRoadmapTopics, []string{"stage_id"}},
-	{resourceMergeRow{}, domain.TableRoadmapResources, []string{"topic_id"}},
-	{bookmarkMergeRow{}, domain.TableRoadmapBookmarks, nil},
+	{row: deckMergeRow{}, table: domain.TableDecks},
+	{row: cardMergeRow{}, table: domain.TableCards, fkColumns: []string{"deck_id"}},
+	{row: pathMergeRow{}, table: domain.TableRoadmapPaths},
+	{row: stageMergeRow{}, table: domain.TableRoadmapStages, fkColumns: []string{"path_id", "deck_id"}},
+	{row: milestoneMergeRow{}, table: domain.TableRoadmapMilestones, fkColumns: []string{"stage_id"}},
+	{row: topicMergeRow{}, table: domain.TableRoadmapTopics, fkColumns: []string{"stage_id"}},
+	{row: resourceMergeRow{}, table: domain.TableRoadmapResources, fkColumns: []string{"topic_id"}},
+	{row: bookmarkMergeRow{}, table: domain.TableRoadmapBookmarks},
 }
 
 // structColumns trả danh sách cột mà GORM sẽ map từ struct — dùng CHÍNH
 // `schema.Parse` của GORM (cùng bộ phân tích mà runtime dùng) nên tag
 // `gorm:"column:ipa"` và quy tắc `IPA → ip_a` đều được tính đúng, không cần
 // bảng ánh xạ thứ 5 phải cập nhật tay.
-func structColumns(row interface{}) []string {
+func structColumns(t *testing.T, row interface{}) []string {
+	t.Helper()
 	sm, err := schema.Parse(row, &sync.Map{}, schema.NamingStrategy{})
 	if err != nil {
-		panic("schema.Parse thất bại: " + err.Error())
+		t.Fatalf("schema.Parse thất bại: %v", err)
 	}
 	var out []string
 	for _, f := range sm.Fields {
@@ -97,7 +98,7 @@ func Test_merge_row_columns_all_appear_in_snapshot_columns(t *testing.T) {
 			fks := fkColumnsOf(spec.table)
 
 			var missing []string
-			for _, c := range structColumns(spec.row) {
+			for _, c := range structColumns(t, spec.row) {
 				// `id` luôn được loader đọc thành `selectList := "id, guid"`.
 				if c == "id" {
 					continue
@@ -132,7 +133,7 @@ func Test_fk_columns_are_declared_in_snapshot_tables(t *testing.T) {
 		spec := spec
 		t.Run(string(spec.table), func(t *testing.T) {
 			structCols := map[string]bool{}
-			for _, c := range structColumns(spec.row) {
+			for _, c := range structColumns(t, spec.row) {
 				structCols[c] = true
 			}
 			declared := fkColumnsOf(spec.table)
@@ -171,7 +172,7 @@ func Test_snapshot_columns_all_appear_in_merge_row(t *testing.T) {
 		spec := spec
 		t.Run(string(spec.table), func(t *testing.T) {
 			structCols := map[string]bool{}
-			for _, c := range structColumns(spec.row) {
+			for _, c := range structColumns(t, spec.row) {
 				structCols[c] = true
 			}
 			// `created_at`/`updated_at`/`deleted` được loader đọc vào field riêng

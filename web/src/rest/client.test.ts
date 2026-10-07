@@ -1,15 +1,7 @@
 // Port `audio.test.ts` (5) + phần `/api/health` của `api.test.ts` (1) sang
-// client REST của app-v2 (`rest/client.ts`), + 1 test mới cho gotcha 501.
+// client REST của app-v2 (`rest/client.ts`).
 import { describe, it, expect, vi } from 'vitest';
-import {
-  buildBackupUrl,
-  buildTTSUrl,
-  downloadBackup,
-  fetchHealth,
-  fetchTTSEngine,
-  uploadRestore,
-  uploadSTT,
-} from './client';
+import { buildTTSUrl, fetchHealth, fetchTTSEngine, uploadSTT } from './client';
 
 describe('test_audio_tts_and_stt_helpers', () => {
   it('test_build_tts_url_encodes_text', () => {
@@ -79,38 +71,6 @@ describe('test_rest_health', () => {
     );
     const h = await fetchHealth('');
     expect(h.status).toBe('ok');
-    vi.unstubAllGlobals();
-  });
-});
-
-// ── gotcha #3 của gate M4: /api/backup + /api/restore trả 501 ───────────────
-describe('test_backup_restore_501', () => {
-  const notImplemented = {
-    ok: false,
-    status: 501,
-    json: async () => ({
-      error:
-        'tính năng backup chưa dùng được: Postgres không có `VACUUM INTO`, cần `pg_dump`/`pg_restore` (M7)',
-    }),
-  };
-
-  it('test_backup_url_points_to_api_backup', () => {
-    expect(buildBackupUrl('')).toBe('/api/backup');
-  });
-
-  it('test_backup_501_throws_server_vietnamese_message', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(notImplemented);
-    vi.stubGlobal('fetch', fetchMock);
-    await expect(downloadBackup('')).rejects.toThrow('chưa dùng được');
-    // Quan trọng: KHÔNG được nuốt lỗi rồi trả về blob rỗng — như vậy UI sẽ báo
-    // "đã tải xong" cho 1 response 501.
-    expect(fetchMock).toHaveBeenCalledOnce();
-    vi.unstubAllGlobals();
-  });
-
-  it('test_restore_501_throws_server_vietnamese_message', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(notImplemented));
-    await expect(uploadRestore(new Blob(['x']), '')).rejects.toThrow('chưa dùng được');
     vi.unstubAllGlobals();
   });
 });

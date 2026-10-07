@@ -1,6 +1,7 @@
 package srs
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -90,7 +91,9 @@ func Test_grade_valid_range(t *testing.T) {
 		g     Grade
 		valid bool
 	}{{GradeAgain, true}, {GradeGood, true}, {GradeEasy, true}, {0, false}, {Grade(5), false}, {Grade(-1), false}} {
-		assert.Equal(t, c.valid, c.g.Valid(), "grade %d", int(c.g))
+		t.Run(fmt.Sprintf("grade=%d", int(c.g)), func(t *testing.T) {
+			assert.Equal(t, c.valid, c.g.Valid(), "grade %d", int(c.g))
+		})
 	}
 	assert.Equal(t, "Quên", GradeAgain.String())
 	assert.Equal(t, "không hợp lệ", Grade(9).String())

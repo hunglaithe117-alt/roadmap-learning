@@ -15,15 +15,6 @@ import (
 	audiodomain "langapp/internal/domain/audio"
 )
 
-// Hằng giữ nguyên hành vi v1 (api/audio.go):
-//   - `maxTTSTextLen` 500 ký tự — chặn 1 câu tổng hợp quá dài.
-//   - `maxSTTBytes` 10MB — trần upload.
-//   - `ttsTimeout` 30s, `sttTimeout` 60s.
-//
-// Timeout đặt ở ĐÂY (transport) chứ không chỉ ở client gRPC: handler là nơi duy
-// nhất biết đây là request web, nên request web có deadline. Use case
-// `practice` gọi cùng engine qua port thì có deadline riác của nó (xem
-// `audioinfra.WithTTSTimeout`).
 const (
 	maxTTSTextLen = 500
 	maxSTTBytes   = 10 << 20
@@ -31,33 +22,20 @@ const (
 	sttTimeout    = 60 * time.Second
 )
 
-// audioFileField là tên field multipart mà client gửi file lên. Giữ "audio"
-// như v1 — client React hiện tại đang gửi đúng tên này, đổi tên là phá UI cũ
-// trước khi M5 kịp port.
+// audioFileField is the multipart form field name for uploaded audio files.
 const audioFileField = "audio"
 
-// ttsHandler `GET /api/tts?text=…&lang=zh|en` → stream `audio/wav`.
-//
-// Gọi qua `audiodomain.TTSSynthesizer`, KHÔNG gọi `os/exec` hay HTTP client từ
-// handler: 2 điều đó là việc của `services/audio-service` và
-// `internal/infrastructure/audio` (STACK-V2-PLAN §2).
+// ttsHandler synthesizes speech from query params and streams audio/wav.
 func ttsHandler(engine audiodomain.TTSSynthesizer, log *slog.Logger) gin.HandlerFunc {
 	if engine == nil {
+
 		return func(c *gin.Context) {
 			writeJSONError(c, http.StatusServiceUnavailable, "chưa cấu hình engine TTS")
 		}
 	}
-	// `LangSynthesizer` là phần mở rộng: engine không chọn được voice thì bỏ
-	// qua `lang` và dùng voice mặc định, KHÔNG phải lỗi (giữ hành vi v1).
 	langEngine, _ := engine.(audiodomain.LangSynthesizer)
 	return func(c *gin.Context) {
-		// Header `X-Engine` đọc TỨC THÌ, KHÔNG bắt 1 bản ở ngoài closure.
-		// `engine.Info()` của adapter gRPC đổi sau request đầu tiên (service
-		// báo tên engine thật qua `SynthesizeResponse.Real`), nên bản chụp lúc
-		// khởi tạo sẽ ghim header ở "audio-service" mãi (F3).
 		info := engine.Info()
-		// Header luôn có, kể cả khi lỗi: client cần biết engine nào đã xử lý
-		// để hiện badge "kết quả không thật" khi là stub.
 		c.Header(audiodomain.Header, info.Name)
 
 		text := strings.TrimSpace(c.Query("text"))
@@ -85,7 +63,7 @@ func ttsHandler(engine audiodomain.TTSSynthesizer, log *slog.Logger) gin.Handler
 			audio, contentType, err = engine.Synthesize(ctx, text)
 		}
 		if err != nil {
-			writeEngineError(c, ctx, log, info, "tts", err)
+			writeEngineError(ctx, c, log, info, "tts", err)
 			return
 		}
 		if contentType == "" {
@@ -93,22 +71,18 @@ func ttsHandler(engine audiodomain.TTSSynthesizer, log *slog.Logger) gin.Handler
 		}
 		c.Header("Content-Type", contentType)
 		c.Header("Content-Length", strconv.Itoa(len(audio)))
-		// `no-store`: audio đổi theo bản Piper/voice model đang chạy, cache
-		// trình duyệt sẽ phát nhầm phiên bản cũ sau khi đổi voice.
 		c.Header("Cache-Control", "no-store")
 		c.Data(http.StatusOK, contentType, audio)
 	}
 }
 
-// sttHandler `POST /api/stt` multipart field `audio` → JSON transcript.
+// sttHandler transcribes uploaded audio files and returns a JSON transcript.
 func sttHandler(engine audiodomain.STTTranscriber, log *slog.Logger) gin.HandlerFunc {
 	if engine == nil {
 		return func(c *gin.Context) {
 			writeJSONError(c, http.StatusServiceUnavailable, "chưa cấu hình engine STT")
 		}
 	}
-	// `DetailedTranscriber` là phần mở rộng: engine không có word-level
-	// timestamp thì trả Transcript rỗng phần Words, không phải lỗi (hành vi v1).
 	detailed, _ := engine.(audiodomain.DetailedTranscriber)
 	return func(c *gin.Context) {
 		info := engine.Info()
@@ -118,9 +92,6 @@ func sttHandler(engine audiodomain.STTTranscriber, log *slog.Logger) gin.Handler
 			writeJSONError(c, http.StatusBadRequest, "thiếu file audio (multipart)")
 			return
 		}
-		// `MaxBytesReader` chặn TRƯỚC khi parse: `ParseMultipartForm` với
-		// `maxSTTBytes` vẫn đọc hết body vào `maxMemory` rồi mới ghi tạm, nên
-		// không có reader chặn thì 1 upload 2GB sẽ đi hết vào đĩa tạm.
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxSTTBytes+1024)
 		if err := c.Request.ParseMultipartForm(maxSTTBytes); err != nil {
 			writeJSONError(c, http.StatusBadRequest, "multipart không hợp lệ: "+err.Error())
@@ -154,7 +125,6 @@ func sttHandler(engine audiodomain.STTTranscriber, log *slog.Logger) gin.Handler
 			filename = header.Filename
 			contentType = header.Header.Get("Content-Type")
 		}
-		// Gợi ý ngôn ngữ: query trước, form field sau (client gửi 1 trong 2).
 		langHint := strings.ToLower(strings.TrimSpace(c.Query("lang")))
 		if langHint == "" {
 			langHint = strings.ToLower(strings.TrimSpace(c.Request.FormValue("lang")))
@@ -170,16 +140,14 @@ func sttHandler(engine audiodomain.STTTranscriber, log *slog.Logger) gin.Handler
 			res, err = engine.Transcribe(ctx, audio, filename, contentType)
 		}
 		if err != nil {
-			writeEngineError(c, ctx, log, info, "stt", err)
+			writeEngineError(ctx, c, log, info, "stt", err)
 			return
 		}
 		c.JSON(http.StatusOK, newSTTResponse(res, info))
 	}
 }
 
-// sttResponse là JSON trả về, giữ nguyên 5 field của `api/audio.go` v1
-// (`transcript`, `lang`, `engine`, `words`, `confidence`) để client cũ đọc được
-// trước khi M5 port sang Vue.
+// sttResponse represents the JSON response for speech transcription.
 type sttResponse struct {
 	Transcript string                      `json:"transcript"`
 	Lang       string                      `json:"lang"`
@@ -198,18 +166,17 @@ func newSTTResponse(t audiodomain.Transcript, info audiodomain.EngineInfo) sttRe
 	}
 }
 
-// writeEngineError log chi tiết server-side nhưng chỉ gửi message ngắn cho
-// client. `X-Engine` luôn được set (đã set ở đầu handler) để UI biết engine nào
-// hỏng.
-func writeEngineError(c *gin.Context, ctx context.Context, log *slog.Logger, info audiodomain.EngineInfo, kind string, err error) {
-	log.Error(kind+" engine thất bại",
+// writeEngineError logs engine errors and returns a client error response.
+func writeEngineError(ctx context.Context, c *gin.Context, log *slog.Logger, info audiodomain.EngineInfo, kind string, err error) {
+	log.Error(kind+" engine failed",
 		slog.String("engine", info.Name), slog.String("err", err.Error()))
 	switch {
-	case errors.Is(err, context.Canceled), ctx.Err() == context.Canceled:
+	case errors.Is(err, context.Canceled), errors.Is(ctx.Err(), context.Canceled):
 		writeJSONError(c, 499, kind+" bị hủy")
-	case errors.Is(err, context.DeadlineExceeded), ctx.Err() == context.DeadlineExceeded:
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(ctx.Err(), context.DeadlineExceeded):
 		writeJSONError(c, http.StatusGatewayTimeout, kind+" timeout")
 	default:
 		writeJSONError(c, http.StatusBadGateway, kind+" thất bại")
 	}
 }
+

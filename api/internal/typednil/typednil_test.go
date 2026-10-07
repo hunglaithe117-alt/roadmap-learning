@@ -52,8 +52,9 @@ func Test_Is_detects_every_nil_shape(t *testing.T) {
 
 func Test_Is_keeps_usable_values(t *testing.T) {
 	// Phía dễ quên: hàm soi nil phải TRẢ FALSE cho mọi thứ dùng được. Hỏng
-	// chỗ này cũng nguy hiểm không kém — `/api/backup` sẽ 501 vĩnh viễn dù
-	// M7 đã cài `pg_dump`, và test nào cũng xanh vì "vẫn trả 501".
+	// chỗ này cũng nguy hiểm không kém — `mutation.sync` sẽ 501 "chưa cấu
+	// hình nguồn snapshot peer" vĩnh viễn dù peer đã được cấu hình, và test
+	// nào cũng xanh vì "vẫn trả 501".
 	real := &impl{n: 7}
 	require.False(t, typednil.Is(real), "con trỏ TỚI là hiện thực hợp lệ, không phải nil")
 	require.False(t, typednil.Is(impl{n: 7}), "giá trị (không phải con trỏ) cũng hợp lệ")
@@ -79,8 +80,8 @@ func Test_Is_keeps_usable_values(t *testing.T) {
 // con trỏ nil không").
 //
 // Vì sao việc này là QUYẾT ĐỊNH chứ không phải sơ suất: khảo sát M7b xác nhận
-// toàn repo có 2 call site (`SnapshotLoader`, `BackupPort`), cả hai đều là
-// interface port có hiện thực bằng con trỏ ⇒ thu hẹp không làm hỏng gì. Nếu
+// toàn repo có 1 call site (`SnapshotLoader`), là interface port có hiện thực
+// bằng con trỏ ⇒ thu hẹp không làm hỏng gì. Nếu
 // sau này có call site truyền nil map/slice, test này sẽ đỏ và bắt người viết
 // phải nghĩ lại thay vì âm thầm nhận hành vi sai.
 func Test_Is_ignores_nil_map_and_slice(t *testing.T) {

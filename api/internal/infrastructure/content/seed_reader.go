@@ -1,11 +1,6 @@
-// Bài đọc graded bundle sẵn. Port NGUYÊN VĂN từ api/reader.go — nội dung
-// bài học, đổi câu là đổi bài.
-//
-// Toàn bộ TỰ BIÊN cho app học (câu ngắn HSK1-2 / A1-A2), không sao chép sách
-// hay kịch bản nào; mỗi bài ghi rõ `Source` để UI hiện nguồn.
 package contentinfra
 
-// ReaderArticle là 1 bài đọc phân loại trình độ, bundle sẵn trong code.
+// ReaderArticle represents a graded reader article.
 type ReaderArticle struct {
 	ID     string
 	Level  string
@@ -17,7 +12,6 @@ type ReaderArticle struct {
 
 const readerSource = "Tự biên cho app học (không bản quyền, public-domain equivalent)"
 
-// readerArticles: 8 bài ngắn tự biên (2 bài × HSK1/HSK2/A1/A2).
 var readerArticles = []ReaderArticle{
 	{
 		ID: "hsk1-1", Level: "HSK1", Lang: "zh",
@@ -69,10 +63,9 @@ var readerArticles = []ReaderArticle{
 	},
 }
 
-// ReaderArticles lọc theo level và id (rỗng = không lọc). `id` khớp CHÍNH XÁC
-// theo hợp đồng v1, không phải tìm chuỗi con.
+// ReaderArticles filters articles by level and exact ID.
 func ReaderArticles(level, id string) []ReaderArticle {
-	out := []ReaderArticle{}
+	var out []ReaderArticle
 	for _, a := range readerArticles {
 		if level != "" && a.Level != level {
 			continue
@@ -85,5 +78,5 @@ func ReaderArticles(level, id string) []ReaderArticle {
 	return out
 }
 
-// ReaderLevels là các trình độ có bài bundle: HSK1, HSK2, A1, A2.
+// ReaderLevels lists the supported reader levels.
 var ReaderLevels = []string{"HSK1", "HSK2", "A1", "A2"}

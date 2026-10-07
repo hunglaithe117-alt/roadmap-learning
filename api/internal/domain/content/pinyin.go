@@ -7,14 +7,12 @@ import (
 	"unicode/utf8"
 )
 
-// PinyinSyllable là 1 âm tiết pinyin: base không dấu + số thanh 1-5.
+// PinyinSyllable represents a single pinyin syllable with base and tone (1-5).
 type PinyinSyllable struct {
 	Base string
-	// Tone là 1-4 cho 4 thanh, 5 cho thanh trung tính (không dấu).
 	Tone int
 }
 
-// toneMarks ánh xạ nguyên âm gốc -> [trung tính, thanh1..thanh4].
 var toneMarks = map[rune][5]rune{
 	'a': {'a', 'ā', 'á', 'ǎ', 'à'},
 	'e': {'e', 'ē', 'é', 'ě', 'è'},
@@ -24,11 +22,10 @@ var toneMarks = map[rune][5]rune{
 	'ü': {'ü', 'ǖ', 'ǘ', 'ǚ', 'ǜ'},
 }
 
-// NeutralTone là số thanh của thanh trung tính (không dấu).
+// NeutralTone denotes the neutral tone number (5).
 const NeutralTone = 5
 
-// NormalizeSyllable hạ chữ thường + đổi "u:"/"v" thành "ü" (2 cách gõ phổ
-// biến của người Việt cho nguyên âu "ü").
+// NormalizeSyllable lowercases and normalizes "u:"/"v" to "ü".
 func NormalizeSyllable(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	s = strings.ReplaceAll(s, "u:", "ü")
@@ -36,8 +33,7 @@ func NormalizeSyllable(s string) string {
 	return s
 }
 
-// ParseSyllable tách "hao3" -> ("hao", 3). Không có số cuối = thanh trung
-// tính 5 (VD "ma").
+// ParseSyllable parses a syllable into base and tone number (defaulting to NeutralTone).
 func ParseSyllable(s string) PinyinSyllable {
 	base, tone, ok := parseNumberedSyllable(s)
 	if !ok {
@@ -46,9 +42,6 @@ func ParseSyllable(s string) PinyinSyllable {
 	return PinyinSyllable{Base: base, Tone: tone}
 }
 
-// parseNumberedSyllable là ParseSyllable cộng cờ "có số thanh 1-5 ở cuối
-// hay không" — TonesFromPinyin cần cờ này vì pinyin thiếu số là lỗi dữ liệu,
-// còn MarkSyllable coi đó là thanh trung tính.
 func parseNumberedSyllable(s string) (base string, tone int, hasNumber bool) {
 	s = NormalizeSyllable(s)
 	if s == "" {
@@ -69,9 +62,7 @@ func isPinyinVowel(r rune) bool {
 	return false
 }
 
-// MarkSyllable vẽ dấu thanh cho 1 âm tiết có số ("hao3" -> "hǎo"). Thanh
-// trung tính giữ nguyên base. Vị trí đặt dấu theo quy tắc chuẩn:
-// a > e > ou > nguyên âm cuối (phủ iu->u, ui->i, üe->e).
+// MarkSyllable adds tone diacritics to a numbered pinyin syllable (e.g. "hao3" -> "hǎo").
 func MarkSyllable(numbered string) string {
 	syll := ParseSyllable(numbered)
 	if syll.Base == "" || syll.Tone < 1 || syll.Tone > 4 {
@@ -104,12 +95,12 @@ func MarkSyllable(numbered string) string {
 	if target < 0 {
 		for i, r := range rs {
 			if isPinyinVowel(r) {
-				target = i // nguyên âm cuối thắng
+				target = i
 			}
 		}
 	}
 	if target < 0 {
-		return syll.Base // không có nguyên âm ("m", "ng") — giữ nguyên
+		return syll.Base
 	}
 	if marks, ok := toneMarks[rs[target]]; ok {
 		rs[target] = marks[syll.Tone]
@@ -117,7 +108,7 @@ func MarkSyllable(numbered string) string {
 	return string(rs)
 }
 
-// PinyinMarks vẽ dấu cho cả cụm ("ni3 hao3" -> "nǐ hǎo").
+// PinyinMarks applies tone diacritics to spaced numbered pinyin (e.g. "ni3 hao3" -> "nǐ hǎo").
 func PinyinMarks(numbered string) string {
 	parts := splitFields(numbered)
 	for i, p := range parts {
@@ -128,11 +119,10 @@ func PinyinMarks(numbered string) string {
 
 func splitFields(s string) []string { return strings.Fields(s) }
 
-// TonePattern là dãy thanh của 1 thẻ, lưu ở cards.tone ("3", "3 3", "1-4").
+// TonePattern represents the tone sequence of a card.
 type TonePattern []int
 
-// ValidTonePattern báo chuỗi có phải pattern thuần (token 1 chữ số 1-5, phân
-// cách bằng space/tab/'-'/',', tối đa 8 token) hay không.
+// ValidTonePattern reports whether s consists of 1-8 tone digits (1-5).
 func ValidTonePattern(s string) bool {
 	toks := toneTokens(s)
 	if len(toks) == 0 || len(toks) > 8 {
@@ -152,33 +142,32 @@ func toneTokens(s string) []string {
 	})
 }
 
-// ParseToneSequence biến input drill thành dãy số thanh. Mỗi token là số trần
-// ("3") hoặc pinyin có số ("hao3"); phân tách bằng space/'-'/','.
+// ParseToneSequence parses input into tone numbers. Each token can be a bare digit or numbered pinyin.
 func ParseToneSequence(s string) ([]int, error) {
 	toks := strings.FieldsFunc(s, func(r rune) bool {
 		return unicode.IsSpace(r) || r == '-' || r == ','
 	})
 	if len(toks) == 0 {
-		return nil, ErrTone("thiếu thanh điệu (VD: 3 3)")
+		return nil, ToneError("thiếu thanh điệu (VD: 3 3)")
 	}
 	out := make([]int, 0, len(toks))
 	for _, t := range toks {
 		t = NormalizeSyllable(t)
 		if t == "" {
-			return nil, ErrTone("âm tiết rỗng trong dãy thanh điệu")
+			return nil, ToneError("âm tiết rỗng trong dãy thanh điệu")
 		}
 		last, _ := utf8.DecodeLastRuneInString(t)
 		if last < '1' || last > '5' {
-			return nil, ErrTone("âm tiết không hợp lệ: " + t + " (mỗi âm tiết cần số 1-5)")
+			return nil, ToneError("âm tiết không hợp lệ: " + t + " (mỗi âm tiết cần số 1-5)")
 		}
 		if len(t) > 1 {
 			base := t[:len(t)-1]
 			if base == "" {
-				return nil, ErrTone("âm tiết không hợp lệ: " + t)
+				return nil, ToneError("âm tiết không hợp lệ: " + t)
 			}
 			for _, r := range base {
 				if !unicode.IsLetter(r) {
-					return nil, ErrTone("âm tiết không hợp lệ: " + t)
+					return nil, ToneError("âm tiết không hợp lệ: " + t)
 				}
 			}
 		}

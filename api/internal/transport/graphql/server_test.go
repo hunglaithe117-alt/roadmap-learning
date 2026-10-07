@@ -54,7 +54,7 @@ func Test_query_over_complexity_limit_returns_422(t *testing.T) {
 	resp, err := http.Post(srv.URL+"/query", "application/json",
 		strings.NewReader(`{"query":`+quote(q)+`}`))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
 	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode,
 		"query vượt complexity limit phải trả 422 (STACK-V2 §3)")
@@ -74,7 +74,7 @@ func Test_query_under_complexity_limit_is_accepted(t *testing.T) {
 	resp, err := http.Post(srv.URL+"/query", "application/json",
 		strings.NewReader(`{"query":`+quote(q)+`}`))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 
 	require.Equal(t, http.StatusOK, resp.StatusCode, "query dưới trần phải qua")
 }
@@ -90,7 +90,7 @@ func Test_get_query_endpoint_serves_operations(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/query?query=" + urlEncode(`{ streak }`))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -101,7 +101,7 @@ func Test_playground_is_404_in_production(t *testing.T) {
 	t.Cleanup(srv.Close)
 	resp, err := http.Get(srv.URL + "/playground")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
@@ -110,7 +110,7 @@ func Test_playground_serves_graphiql_in_dev(t *testing.T) {
 	t.Cleanup(srv.Close)
 	resp, err := http.Get(srv.URL + "/playground")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	t.Cleanup(func() { _ = resp.Body.Close() })
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 

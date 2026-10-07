@@ -1,30 +1,25 @@
-// Package content chứa bounded context nội dung học: từ điển Trung/Anh, bộ
-// thanh điệu Pinyin, chunking câu, trọng âm và checklist THIEU.
-//
-// Port từ api/chinese.go + api/english.go v1. Ở đây KHÔNG có SQL — dict/en_dict
-// được đọc qua repository (M3).
+// Package content provides learning content domain logic: Chinese and English
+// dictionaries, pinyin tone processing, sentence chunking, stress analysis, and THIEU checklist.
 package content
 
-// DictionaryEntry là 1 dòng dict: chữ Hán, pinyin có số thanh, nghĩa tiếng
-// Việt. Tương đương cột hanzi/pinyin/nghia.
+// DictionaryEntry represents a Chinese dictionary entry.
 type DictionaryEntry struct {
 	ID     int64
 	Hanzi  string
-	Pinyin string // "ni3 hao3" (có số thanh), chưa dấu
+	Pinyin string
 	Nghia  string
 }
 
-// EnglishEntry là 1 dòng en_dict: lang, headword, IPA, gloss.
+// EnglishEntry represents an English dictionary entry.
 type EnglishEntry struct {
 	ID      int64
 	Lang    string
 	Term    string
-	Reading string // IPA, có thể chứa 2 cách đọc "(n) · (v)"
+	Reading string
 	Gloss   string
 }
 
-// ZHCard là thẻ học Trung kèm trường do context này sở hữu (tone, audio_url).
-// PinyinMarks được tính lúc đọc, không lưu DB.
+// ZHCard represents a Chinese study card with tone and audio metadata.
 type ZHCard struct {
 	ID          int64
 	DeckID      int64
@@ -38,7 +33,7 @@ type ZHCard struct {
 	State       string
 }
 
-// DrillItem là 1 câu hỏi drill thanh điệu: mẫu (pinyin có số) + đáp án.
+// DrillItem represents a tone drill question and its expected answer.
 type DrillItem struct {
 	CardID     int64
 	Expected   string
@@ -47,8 +42,8 @@ type DrillItem struct {
 	PinyinMark string
 }
 
-// TonesFromPinyin rút dãy số thanh từ pinyin ("ni3 hao3" -> [3 3]). ok=false
-// nếu bất kỳ âm tiết nào không có số.
+// TonesFromPinyin extracts tone numbers from numbered pinyin (e.g. "ni3 hao3" -> [3 3]).
+// Returns false if any syllable lacks a tone number.
 func TonesFromPinyin(pinyin string) ([]int, bool) {
 	fields := splitFields(pinyin)
 	if len(fields) == 0 {

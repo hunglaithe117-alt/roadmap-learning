@@ -23,7 +23,11 @@ WORKDIR /src/api
 RUN go mod download
 COPY api/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/langapp-server ./cmd/langapp \
-    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/audio-service ./services/audio-service
+    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/audio-service ./services/audio-service \
+    # Healthcheck của audio-service: probe gRPC health, build ở stage này vì
+    # toolchain Go đã có sẵn (không thêm image, không thêm dependency — grpc
+    # vốn đã là require của module). Lý do đầy đủ ở `cmd/audio-health-probe`.
+    && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/audio-health-probe ./cmd/audio-health-probe
 
 # ---- Stage 3: fetch Piper voices (T7.1, pinned files from rhasspy/piper-voices) ----
 # Pinned HF commit c10ece1aade47bb51c153c893d14e5bf8e5b7117 (thay resolve/main):
@@ -61,6 +65,7 @@ COPY --from=apibuild /out/langapp-server /app/langapp-server
 # chạy `/app/audio-service`. Tách image riêng cho audio sẽ tải 2 lần Piper +
 # 2 voice 752MB cho cùng 2 file.
 COPY --from=apibuild /out/audio-service /app/audio-service
+COPY --from=apibuild /out/audio-health-probe /app/audio-health-probe
 COPY THIRD-PARTY-LICENSES /app/THIRD-PARTY-LICENSES
 USER app
 ENV PORT=8080 \
@@ -75,6 +80,12 @@ ENV PORT=8080 \
 # volume `postgres-data`, khai trong `docker-compose.yml`.
 # 9090 = cổng gRPC của audio-service.
 EXPOSE 8080 9090
+# ⚠️ HEALTHCHECK dưới đây viết cho ENTRYPOINT `/app/langapp-server` (app).
+# `audio-service` dùng CHUNG image này nên sẽ THỪA HƯỞ healthcheck này — đó là
+# nguồn của bug "audio-service luôn unhealthy" (HTTP :8080 trong khi nó là gRPC
+# :9090). `docker-compose.yml` ghi đè cho `audio-service` bằng
+# `/app/audio-health-probe`. Đừng coi khối dưới là của cả 2 service.
+#
 # HEALTHCHECK chấp nhận CẢ `ok` LẪN `degraded`.
 #
 # `degraded` chỉ xuất hiện khi audio là stub, tức `AUDIO_GRPC_ADDR` rỗng — đó là

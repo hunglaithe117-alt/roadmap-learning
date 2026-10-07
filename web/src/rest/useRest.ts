@@ -1,5 +1,5 @@
-// M5 — composable vue-query cho 5 endpoint REST. Đây là **nửa thứ hai** của
-// kiến trúc 2 protocol: GraphQL đi qua urql, 5 endpoint này đi qua vue-query.
+// M5 — composable vue-query cho 3 endpoint REST. Đây là **nửa thứ hai** của
+// kiến trúc 2 protocol: GraphQL đi qua urql, 3 endpoint này đi qua vue-query.
 //
 // Vì sao `useQuery` chứ không tự `ref` + `await`: các endpoint này được bấm
 // thủ công (bấm "Check /api/health", bấm "Play TTS") chứ không tự chạy — nên
@@ -11,16 +11,9 @@
 // Options của `useQuery` (vue-query) bám từng entry của `queryKey` vào nguồn
 // của nó nên truyền `ref` cho `text` là tự refetch khi đổi chữ — đó là lý do
 // các hàm dưới nhận `MaybeRef` chứ không nhận string.
-import { useMutation, useQuery } from '@tanstack/vue-query';
+import { useQuery } from '@tanstack/vue-query';
 import { toValue, type MaybeRef } from 'vue';
-import { afterMutation } from '../lib/afterMutation';
-import {
-  downloadBackup,
-  fetchHealth,
-  fetchTTSEngine,
-  uploadRestore,
-  type RestoreResult,
-} from './client';
+import { fetchHealth, fetchTTSEngine } from './client';
 import { restKeys } from './queryClient';
 
 /**
@@ -44,33 +37,5 @@ export function useTtsEngineQuery(text: MaybeRef<string>, enabled: MaybeRef<bool
     queryFn: () => fetchTTSEngine(toValue(text)),
     enabled,
     retry: false,
-  });
-}
-
-/**
- * `GET /api/backup` — **trả 501 tới M7**. Vẫn gọi thật (thay vì giấu nút) để
- * người dùng thấy message tiếng Việt của server nói rõ tính năng đang xây,
- * chứ không phải một nút bấm im lặng. Lỗi đọc ở `error.value` và hiện đỏ.
- */
-export function useBackupQuery(enabled: MaybeRef<boolean>) {
-  return useQuery({
-    queryKey: restKeys.backup(),
-    queryFn: () => downloadBackup(),
-    enabled,
-    retry: false,
-  });
-}
-
-/**
- * `POST /api/restore` — **trả 501 tới M7**, cùng lý do trên. Thành công thì
- * `afterMutation()` vì restore ghi đè toàn bộ DB: mọi query đang cache (cả 2
- * protocol) đều cũ.
- */
-export function useRestoreMutation() {
-  // `mutationFn` nhận đúng 1 tham số là biến của người dùng, nên bọc lại để
-  // không truyền nhầm tham số `base` thứ hai của `uploadRestore`.
-  return useMutation<RestoreResult, Error, File | Blob>({
-    mutationFn: (file) => uploadRestore(file),
-    onSuccess: afterMutation,
   });
 }

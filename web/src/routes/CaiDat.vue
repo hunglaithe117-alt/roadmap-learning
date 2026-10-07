@@ -1,18 +1,18 @@
 <script setup lang="ts">
 // M5 — port từ `routes/CaiDat.tsx`.
 //
-// 3 điểm khác bản v1, đều là hệ quả của app-v2 và PHẢI hiện rõ cho người dùng:
+// 2 điểm khác bản v1, đều là hệ quả của app-v2 và PHẢI hiện rõ cho người dùng:
 //
-//  1. **Backup / Restore trả 501** (`BackupPort` chưa implement — Postgres không
-//     có `VACUUM INTO`, cần `pg_dump`/`pg_restore` thuộc M7). Bản v1 có `<a
-//     download>` tới `/api/backup`: bấm là trình duyệt tải về 1 file JSON lỗi
-//     rồi tưởng là backup. Ở đây gọi thật qua vue-query và hiện message tiếng
-//     Việt của server — không bao giờ trông như thành công.
-//  2. **Đồng bộ peer không nhận file nữa**: app-v2 chưa nối peer (M4 §8), nên
+//  1. **Đồng bộ peer không nhận file nữa**: app-v2 chưa nối peer (M4 §8), nên
 //     `sync` là mutation không tham số. Nút vẫn còn, gọi để hiện lỗi nguyên văn
 //     thay vì giấu.
-//  3. Ô "API base" đọc/ghi qua `lib/apiBase` — đổi base phải `resetUrqlClient()`
+//  2. Ô "API base" đọc/ghi qua `lib/apiBase` — đổi base phải `resetUrqlClient()`
 //     để client urql dựng lại URL, không thì vẫn gọi host cũ.
+//
+// Mục backup/restore của bản v1 ĐÃ BỊ GỠ khỏi trang này: server không còn
+// `/api/backup` + `/api/restore` (chúng chỉ trả 501 vì `BackupPort` chưa bao giờ
+// có hiện thực) ⇒ nút ở đây chỉ có thể báo lỗi. Xem
+// `phases/task-memory/remove-backup-restore.md`.
 import { onMounted, ref } from 'vue';
 import NoticeBar from '../components/NoticeBar.vue';
 import { resetUrqlClient } from '../graphql/client';
@@ -23,7 +23,7 @@ import {
   uploadSTT,
   type STTResult,
 } from '../rest/client';
-import { useBackupQuery, useHealthQuery, useRestoreMutation, useTtsEngineQuery } from '../rest/useRest';
+import { useHealthQuery, useTtsEngineQuery } from '../rest/useRest';
 import { readConfettiEnabled, writeConfettiEnabled } from '../roadmap/map/viewPrefs';
 import {
   fetchSyncConflicts,
@@ -49,7 +49,6 @@ const syncConflictsNow = ref<SyncConflict[]>([]);
 const conflicts = ref<SyncConflict[]>([]);
 const lastSyncAt = ref('');
 const syncing = ref(false);
-const restoreMsg = ref('');
 
 // ── API base + health ───────────────────────────────────────────────────────
 function saveBase() {
@@ -118,35 +117,6 @@ async function stopAndUpload() {
     audioErr.value = errorMessage(e);
   } finally {
     recState.value = 'idle';
-  }
-}
-
-// ── Backup / Restore (501 tới M7) ───────────────────────────────────────────
-const backupOn = ref(false);
-const backup = useBackupQuery(backupOn);
-const restore = useRestoreMutation();
-// Khi server đã có `pg_dump` (M7) nút tải sẽ tự hiện — hiện tại luôn 501 nên
-// nhánh thành công là đường chưa dùng tới, nhưng vẫn phải viết đúng.
-
-function saveBackupBlob() {
-  const blob = backup.data.value;
-  if (!blob) return;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'langapp.dump';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function onRestoreFile(e: Event) {
-  const f = (e.target as HTMLInputElement).files?.[0];
-  if (!f) return;
-  try {
-    const r = await restore.mutateAsync(f);
-    restoreMsg.value = `Restore xong (${r.restored ?? '?'} byte). Tải lại trang để thấy dữ liệu mới.`;
-  } catch (err) {
-    restoreMsg.value = errorMessage(err);
   }
 }
 
@@ -297,48 +267,6 @@ function saveConfetti(): void {
     <NoticeBar v-if="audioErr" :text="audioErr" />
 
     <section class="mt-4">
-      <h3 class="font-semibold">Backup / Restore (Postgres dump — GHI ĐÈ hủy diệt)</h3>
-      <p class="mt-1">
-        <strong>Restore ghi đè toàn bộ dữ liệu máy này bằng file backup.</strong>
-        Muốn giữ cả hai máy, dùng Đồng bộ (merge) ở dưới thay vì restore.
-      </p>
-      <p class="mt-1 text-warn">
-        Tính năng backup/restore <strong>chưa dùng được</strong> ở bản này: Postgres
-        không có <code>VACUUM INTO</code>, cần <code>pg_dump</code>/<code
-          >pg_restore</code
-        >. Server trả <code>501</code> — bấm nút sẽ thấy message của server thay vì
-        tải về 1 file hỏng.
-      </p>
-      <div class="mt-2 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          class="rounded-card border border-line px-3 py-1 hover:border-line-strong"
-          @click="backupOn = true"
-        >
-          Kiểm tra &amp; tải backup
-        </button>
-      </div>
-      <NoticeBar v-if="backup.error.value" :text="errorMessage(backup.error.value)" />
-      <NoticeBar v-if="backup.isSuccess.value" tone="ok" text="Đã tải được backup." />
-      <button
-        v-if="backup.data.value"
-        type="button"
-        class="ml-2 rounded-card border border-line px-3 py-1 hover:border-line-strong"
-        @click="saveBackupBlob"
-      >
-        Lưu file backup (.dump)
-      </button>
-      <input
-        type="file"
-        class="mt-2 block"
-        accept=".db,.dump,.sqlite,.sqlite3,application/x-sqlite3"
-        aria-label="file backup để restore"
-        @change="onRestoreFile"
-      />
-      <NoticeBar :text="restoreMsg" />
-    </section>
-
-    <section class="mt-4">
       <h3 class="font-semibold">Đồng bộ peer (merge giữ cả hai — KHÔNG ghi đè)</h3>
       <p class="mt-1">
         Bản này <strong>chưa nối peer</strong>: app-v2 không nhận file backup qua HTTP,
@@ -457,7 +385,7 @@ function saveConfetti(): void {
         Bật sync thử nghiệm
       </label>
       <p v-if="syncInfo" class="text-muted">{{ syncInfo }}</p>
-      <p v-if="!syncOn">Sync tắt: học offline 1 máy, chuyển máy bằng backup/restore.</p>
+      <p v-if="!syncOn">Sync tắt: học offline 1 máy, chuyển máy bằng Đồng bộ (merge) ở trên.</p>
     </section>
   </div>
 </template>

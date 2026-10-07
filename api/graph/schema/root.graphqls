@@ -2,8 +2,7 @@
 #
 # Độ phủ: TOÀN BỘ use case JSON của 6 context có bảng. `audio` không có ở đây
 # (streaming binary + multipart upload không thuộc GraphQL — STACK-V2 §3), nó ở
-# `internal/transport/http`: `/api/tts`, `/api/stt`, `/api/backup`,
-# `/api/restore`, static SPA.
+# `internal/transport/http`: `/api/tts`, `/api/stt`, static SPA.
 
 type Query {
   # ── srs ─────────────────────────────────────────────────────────────────

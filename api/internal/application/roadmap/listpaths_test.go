@@ -240,7 +240,7 @@ func Test_stage_order_in_tree_is_stable_across_calls(t *testing.T) {
 	}
 }
 
-// `GetPath` và `StageTreeByPathIDs` là HAI đường đọc cây; chúng phải cho CÙNG
+// `PathTree` và `StageTreeByPathIDs` là HAI đường đọc cây; chúng phải cho CÙNG
 // thứ tự stage, nếu không client thấy cây đổi chỗ tuỳ đường gọi.
 func Test_get_path_and_stage_tree_agree_on_stage_order(t *testing.T) {
 	repo := newFakeRepo()
@@ -249,7 +249,7 @@ func Test_get_path_and_stage_tree_agree_on_stage_order(t *testing.T) {
 
 	seedPath(t, svc, "hai-duong", 4, 1)
 
-	view, err := svc.GetPath(ctx, "hai-duong")
+	view, err := svc.PathTree(ctx, "hai-duong")
 	require.NoError(t, err)
 	pathID := repo.pathBySlug(t, "hai-duong").ID
 	byPath, err := svc.StageTreeByPathIDs(ctx, []int64{pathID})
@@ -258,6 +258,6 @@ func Test_get_path_and_stage_tree_agree_on_stage_order(t *testing.T) {
 	require.Len(t, byPath[pathID], 4)
 	for i := range view.Stages {
 		require.Equal(t, view.Stages[i].ID, byPath[pathID][i].ID,
-			"stage thứ %d lệch giữa GetPath và StageTreeByPathIDs", i)
+			"stage thứ %d lệch giữa PathTree và StageTreeByPathIDs", i)
 	}
 }

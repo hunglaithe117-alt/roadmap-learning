@@ -10,29 +10,13 @@ import (
 	domain "langapp/internal/domain/sync"
 )
 
-// SkipTables là các bảng CỐ Ý không merge. Liệt kê ở đây để tài liệu hoá lý
-// do, không chỉ để tránh quên:
-//
-//   - dict / en_dict: từ điển là DỮ LIỆU TĨNH, cùng phiên bản 2 máy đã có
-//     giống nhau. Ghi đè là mất nghĩa user sửa tay.
-//   - schema_migrations: version của DB local, không bao giờ lấy từ peer —
-//     lấy thì máy này tự nhận là đã upgrade và migration sẽ không chạy.
-//   - goose_db_version: goose tự quản lý, cùng lý do.
+// SkipTables lists tables intentionally skipped during merge.
 var SkipTables = []string{"dict", "en_dict", "schema_migrations", "goose_db_version"}
 
-// Merge gộp snapshot peer vào DB local trong 1 transaction.
-//
-// Thứ tự bắt buộc (FK): decks → cards; paths → stages → {milestones, topics}
-// → resources; reviews/notes sau cards vì chúng trỏ `card_id`.
-//
-// Mọi quyết định LWW / tombstone / ghi log conflict đi qua `domain/sync.Decide`
-// — tầng này KHÔNG tự suy luận luật, chỉ thi hành `MergeDecision.Action`.
+// Merge merges a peer snapshot into the local database in a single transaction.
 func (s *Service) Merge(ctx context.Context, snap domain.PeerSnapshot) (MergeResult, error) {
 	now := s.timestampNow()
 
-	// Chặn merge giữa 2 máy lệch schema TRƯỚC khi mở transaction: lý do v1 đã
-	// chọn là "xóa DB làm lại, không migrate, không fallback" — dữ liệu sai kiểu
-	// hỏng còn tệ hơn không đồng bộ.
 	localV, err := s.repo.SchemaVersion(ctx)
 	if err != nil {
 		return MergeResult{}, fmt.Errorf("đọc schema version local: %w", err)
@@ -82,8 +66,7 @@ func (s *Service) Merge(ctx context.Context, snap domain.PeerSnapshot) (MergeRes
 	}, nil
 }
 
-// localRowPtr trả con trỏ tới row local đã đọc, hoặc nil nếu chưa có — đúng
-// dạng `Decide` mong (nil = "chưa có bản local" → insert).
+// localRowPtr returns a pointer to local row, or nil if not found.
 func localRowPtr(r domain.Row) *domain.Row { return &r }
 
 func row(table domain.Table, guid, updated, created string, deleted int, values map[string]string) domain.Row {
@@ -93,7 +76,7 @@ func row(table domain.Table, guid, updated, created string, deleted int, values 
 	}
 }
 
-// mergeDecks áp LWW lên bảng `decks`.
+// mergeDecks applies LWW merge to decks table.
 func (s *Service) mergeDecks(ctx context.Context, tx Tx, snap domain.PeerSnapshot,
 	lastSync, now string, sink *conflictSink, merged *Merged) error {
 	local, err := s.repo.DeckRows(ctx, tx)
@@ -128,7 +111,7 @@ func (s *Service) mergeDecks(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 			local[in.GUID] = in
 			merged.Decks++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return nil
 }
@@ -137,39 +120,21 @@ func deckValues(d DeckRow) map[string]string {
 	return map[string]string{"name": d.Name, "lang": d.Lang}
 }
 
-// mergeCards áp LWW lên `cards`, remap `deck_id` qua guid.
+// mergeCards applies LWW merge to cards table and remaps deck_id via GUID.
 func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapshot,
 	lastSync, now string, sink *conflictSink, merged *Merged) (map[string]int64, error) {
 	local, err := s.repo.CardRows(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("đọc card local: %w", err)
 	}
-	// Bản đồ guid→id đọc LẠI trong transaction sau khi merge decks: đây là chỗ
-	// duy nhất nhìn thấy cả deck vừa insert. Giữ map trong RAM sẽ bỏ sót chúng.
 	deckIDByGUID, err := s.deckIDs(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	// `adopted` là guid CŨ (tombstone local) → id của thẻ đã hồi sinh.
-	//
-	// Nó giữ 2 vai trò, cùng 1 nguyên nhân:
-	//
-	//  1. Chặn incoming mang guid cũ tạo thêm row. Peer gửi CẢ thẻ sống
-	//     `c-aaa` LẪN tombstone `c-zzz` cùng front (tìm hiểu 1 thẻ đã xoá rồi
-	//     tạo lại ở máy khác). Sau khi hồi sinh, `c-zzz` không còn tồn tại
-	//     local; nếu insert nó, `ux_cards_deck_front` là partial
-	//     (`WHERE deleted = 0`) nên KHÔNG chặn ⇒ mọc thêm 1 row tombstone rác
-	//     mà user không bao giờ tạo.
-	//  2. Giữ alias cho `reviews`/`notes` của peer vẫn trỏ đúng thẻ: `cardIDs`
-	//     đọc lại từ DB nên không thấy `c-zzz` nữa; thiếu alias thì lịch sử
-	//     ôn gắn với guid cũ bị bỏ im lặng.
 	adopted := map[string]int64{}
 	for _, in := range cardRowsFrom(snap) {
 		deckID, ok := deckIDByGUID[in.DeckGUID]
 		if !ok {
-			// Deck cha chưa map được → bỏ card. Cùng version thì deck luôn đi
-			// kèm card, nên trường hợp này = snapshot hỏng; bỏ thay vì tạo
-			// card mồ côi (FK sẽ chặn rồi rollback cả merge).
 			continue
 		}
 		in.DeckID = &deckID
@@ -186,8 +151,6 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 
 		switch d.Action {
 		case domain.ActionUpdate:
-			// `ID` là id số LOCAL — application biết vì nó vừa đọc `CardRows`.
-			// KHÔNG bao giờ lấy id từ snapshot: id 2 máy trùng nhau.
 			in.ID = cur.ID
 			if _, _, err := s.repo.UpsertCard(ctx, tx, in, true); err != nil {
 				return nil, fmt.Errorf("update card %s: %w", in.GUID, err)
@@ -195,10 +158,6 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 			local[in.GUID] = in
 			merged.Cards++
 		case domain.ActionInsert:
-			// Peer RE-CREATE 1 thẻ mà local đã xoá mềm → HỒI SINH tombstone
-			// local thay vì tạo row mới: giữ `id` (mọi `reviews.card_id` số còn
-			// trỏ đúng) và nhận guid của peer để 2 máy hội tụ. Tạo row mới thì
-			// 2 máy có 2 thẻ khác id cùng front và lần sync sau nhân đôi.
 			tombID, tombGUID, ok, err := s.repo.TombstoneCard(ctx, tx, deckID, in.Front)
 			if err != nil {
 				return nil, fmt.Errorf("tra tombstone card: %w", err)
@@ -209,33 +168,11 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 					if _, _, err := s.repo.UpsertCard(ctx, tx, in, true); err != nil {
 						return nil, fmt.Errorf("hồi sinh card %s: %w", in.GUID, err)
 					}
-					// PHẢI cập nhật `local` sau khi hồi sinh. Đây là toàn sao
-					// của finding B2: lệnh UPDATE vừa ghi `guid = in.GUID` cho
-					// row `tombID`, nhưng map `local` vẫn còn khoá `tombGUID` trỏ
-					// tới `tombID` với payload CŨ. Incoming tiếp theo mang
-					// `tombGUID` (peer cũng có tombstone ấy) sẽ tìm thấy, quyết
-					// định UPDATE và ghi `guid = tombGUID, deleted = 1` — **xoá
-					// ngược chính thẻ vừa hồi sinh**, lặp lại mãi mỗi lần sync.
-					//
-					// `local` được cập nhật sau mọi lần ghi ở **5** bảng:
-					// `decks`, `cards`, `roadmap_milestones`, `roadmap_resources`,
-					// `roadmap_bookmarks`.
-					//
-					// Ba bảng còn lại (`roadmap_paths`, `roadmap_stages`,
-					// `roadmap_topics`) KHÔNG cần, và đây là lý do để không ai
-					// "cho đủ" rồi sinh bug mới:
-					//  1. Cả 3 có `UNIQUE (guid)`, nên `local` vốn đã đúng: một
-					//     incoming guid không thể trùng khoá nào đang có trong
-					//     map (trùng thì `Decide` ra Update, không ra Insert).
-					//  2. Khi merge ghi, KHÔNG method nào của chúng ghi lại
-					//     `guid` — khác `UpsertCard`, chỉ hồi sinh tombstone mới
-					//     đổi guid của một row. Không có tình huống "row đổi
-					//     guid nhưng map vẫn giữ khoá cũ".
 					delete(local, tombGUID)
 					local[in.GUID] = in
 					adopted[tombGUID] = tombID
 					merged.Cards++
-					sink.add(&domain.Conflict{
+					sink.add(ctx, &domain.Conflict{
 						Table: domain.TableCards, GUID: in.GUID, Winner: domain.WinnerIncoming,
 						Detail: fmt.Sprintf("recreate-adopted-tombstone local_guid=%s front=%q id=%d",
 							tombGUID, in.Front, tombID),
@@ -244,23 +181,12 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 				}
 				continue
 			}
-			// Front này đã có 1 thẻ SỐNG ở local dưới guid KHÁC, và ta đang
-			// nắm rõ thẻ đó (có trong `local`) ⇒ incoming là tombstone cũ của
-			// peer, không phải thẻ mới.
-			//
-			// Phải chặn TRƯỚC khi insert vì `ux_cards_deck_front` là partial
-			// (`WHERE deleted = 0`): incoming mang `deleted = 1` thì index KHÔNG
-			// chặn, lọt vào DB thành 1 row tombstone rác mà user không tạo.
-			// Đây cũng là đường đi của 2 máy cùng gõ tay 1 thẻ (cùng front,
-			// guid khác) — trước đây `UpsertCard` tự bắt qua `ON CONFLICT`,
-			// giờ chặn sớm hơn nhưng kết quả với user giống hệt: giữ bản
-			// local + ghi log.
 			if liveID, liveGUID, found, err := s.repo.LiveCardGUIDByFront(ctx, tx, deckID, in.Front); err != nil {
 				return nil, fmt.Errorf("tra thẻ sống cùng front %q: %w", in.Front, err)
 			} else if found {
 				if _, tracked := local[liveGUID]; tracked {
 					adopted[in.GUID] = liveID
-					sink.add(&domain.Conflict{
+					sink.add(ctx, &domain.Conflict{
 						Table: domain.TableCards, GUID: in.GUID, Winner: domain.WinnerLocal,
 						Detail: fmt.Sprintf("peer-row-collapses-into-live-card front=%q kept_guid=%s",
 							in.Front, liveGUID),
@@ -274,9 +200,7 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 				return nil, fmt.Errorf("insert card %s: %w", in.GUID, err)
 			}
 			if dup {
-				// 2 máy cùng tạo 1 thẻ tay: giữ bản local, log lại để user tự
-				// xử — im lặng khiến họ tưởng dữ liệu peer bị mất.
-				sink.add(&domain.Conflict{
+				sink.add(ctx, &domain.Conflict{
 					Table: domain.TableCards, GUID: in.GUID, Winner: domain.WinnerLocal,
 					Detail: fmt.Sprintf("unique-live-duplicate kept local front=%q", in.Front),
 					At:     now,
@@ -286,7 +210,7 @@ func (s *Service) mergeCards(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 			local[in.GUID] = in
 			merged.Cards++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return adopted, nil
 }
@@ -306,7 +230,6 @@ func cardValues(c CardRow) map[string]string {
 	return out
 }
 
-// deckIDs đọc lại bản đồ guid→id của deck local trong transaction.
 func (s *Service) deckIDs(ctx context.Context, tx Tx) (map[string]int64, error) {
 	rows, err := s.repo.DeckRows(ctx, tx)
 	if err != nil {
@@ -321,7 +244,6 @@ func (s *Service) deckIDs(ctx context.Context, tx Tx) (map[string]int64, error) 
 	return out, nil
 }
 
-// cardIDs đọc lại bản đồ guid→id của card local trong transaction.
 func (s *Service) cardIDs(ctx context.Context, tx Tx) (map[string]int64, error) {
 	rows, err := s.repo.CardRows(ctx, tx)
 	if err != nil {
@@ -336,9 +258,7 @@ func (s *Service) cardIDs(ctx context.Context, tx Tx) (map[string]int64, error) 
 	return out, nil
 }
 
-// mergeRoadmap áp CÙNG luật LWW lên toàn bộ cây `roadmap_*` + bookmarks — đây
-// là phần v1 BỎ SÓT (plan M7 ghi rõ), và là lý do context sync cần UnitOfWork
-// chung với srs: một lần merge phải chạm cả hai.
+// mergeRoadmap applies LWW merge across all roadmap tables and bookmarks.
 func (s *Service) mergeRoadmap(ctx context.Context, tx Tx, snap domain.PeerSnapshot,
 	lastSync, now string, sink *conflictSink, merged *Merged) error {
 	pathIDByGUID, err := s.mergePaths(ctx, tx, snap, lastSync, now, sink, merged)
@@ -391,17 +311,13 @@ func (s *Service) mergePaths(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 				return nil, fmt.Errorf("ghi roadmap_paths %s: %w", in.GUID, err)
 			}
 			if skipped {
-				// INSERT bị `ON CONFLICT DO NOTHING` bỏ qua: peer có path này
-				// nhưng local đã có row trùng UNIQUE khác guid. KHÔNG đếm vào
-				// `merged` — báo cáo "đã merge" khi thực tế bị bỏ im lặng là
-				// loại bug khiến user tin đã sync xong.
-				sink.addSkipped(domain.TableRoadmapPaths, in.GUID, in.Slug, now)
+				sink.addSkipped(ctx, domain.TableRoadmapPaths, in.GUID, in.Slug, now)
 				continue
 			}
 			ids[in.GUID] = newID
 			merged.RoadmapPaths++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return ids, nil
 }
@@ -418,7 +334,7 @@ func (s *Service) mergeStages(ctx context.Context, tx Tx, snap domain.PeerSnapsh
 	}
 	for _, in := range stageRowsFrom(snap) {
 		if _, ok := pathIDByGUID[in.PathGUID]; !ok {
-			continue // path cha chưa map được → bỏ (cascade)
+			continue
 		}
 		cur, found := local[in.GUID]
 		localDeck := ""
@@ -442,23 +358,18 @@ func (s *Service) mergeStages(ctx context.Context, tx Tx, snap domain.PeerSnapsh
 				return nil, fmt.Errorf("ghi roadmap_stages %s: %w", in.GUID, err)
 			}
 			if skipped {
-				sink.addSkipped(domain.TableRoadmapStages, in.GUID, in.Slug, now)
+				sink.addSkipped(ctx, domain.TableRoadmapStages, in.GUID, in.Slug, now)
 				continue
 			}
 			ids[in.GUID] = newID
 			merged.RoadmapStages++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return ids, nil
 }
 
-// stageValues là payload so sánh LWW của stage.
-//
-// `localDeck` là `deck_guid` của bản LOCAL, dùng khi incoming không mang thông
-// tin deck (`DeckGUID == nil`). Bắt buộc: `differs()` so CẢ `len(Values)` lẫn
-// từng giá trị, nên thiếu 1 khoá ở một bên sẽ báo "khác nhau" và luật "2 bản
-// giống hệt → keep" không bao giờ chạy.
+// stageValues builds comparison map for stage LWW decisions.
 func stageValues(st StageRow, localDeck string) map[string]string {
 	out := map[string]string{
 		"slug": st.Slug, "title": st.Title, "status": st.Status,
@@ -502,15 +413,14 @@ func (s *Service) mergeMilestones(ctx context.Context, tx Tx, snap domain.PeerSn
 				return fmt.Errorf("ghi roadmap_milestones %s: %w", in.GUID, err)
 			}
 			if skipped {
-				sink.addSkipped(domain.TableRoadmapMilestones, in.GUID, in.Text, now)
+				sink.addSkipped(ctx, domain.TableRoadmapMilestones, in.GUID, in.Text, now)
 				continue
 			}
 			in.ID = newID
-			// Cập nhật `local` sau mọi lần ghi — xem giải thích B2 ở mergeCards.
 			local[in.GUID] = in
 			merged.RoadmapMilestones++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return nil
 }
@@ -547,13 +457,13 @@ func (s *Service) mergeTopics(ctx context.Context, tx Tx, snap domain.PeerSnapsh
 				return nil, fmt.Errorf("ghi roadmap_topics %s: %w", in.GUID, err)
 			}
 			if skipped {
-				sink.addSkipped(domain.TableRoadmapTopics, in.GUID, in.Title, now)
+				sink.addSkipped(ctx, domain.TableRoadmapTopics, in.GUID, in.Title, now)
 				continue
 			}
 			ids[in.GUID] = newID
 			merged.RoadmapTopics++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return ids, nil
 }
@@ -602,15 +512,14 @@ func (s *Service) mergeResources(ctx context.Context, tx Tx, snap domain.PeerSna
 				return fmt.Errorf("ghi roadmap_resources %s: %w", in.GUID, err)
 			}
 			if skipped {
-				sink.addSkipped(domain.TableRoadmapResources, in.GUID, in.Title, now)
+				sink.addSkipped(ctx, domain.TableRoadmapResources, in.GUID, in.Title, now)
 				continue
 			}
 			in.ID = newID
-			// Cập nhật `local` sau mọi lần ghi — xem giải thích B2 ở mergeCards.
 			local[in.GUID] = in
 			merged.RoadmapResources++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return nil
 }
@@ -648,15 +557,14 @@ func (s *Service) mergeBookmarks(ctx context.Context, tx Tx, snap domain.PeerSna
 				return fmt.Errorf("ghi roadmap_bookmarks %s: %w", in.GUID, err)
 			}
 			if skipped {
-				sink.addSkipped(domain.TableRoadmapBookmarks, in.GUID, in.Title, now)
+				sink.addSkipped(ctx, domain.TableRoadmapBookmarks, in.GUID, in.Title, now)
 				continue
 			}
 			in.ID = newID
-			// Cập nhật `local` sau mọi lần ghi — xem giải thích B2 ở mergeCards.
 			local[in.GUID] = in
 			merged.RoadmapBookmarks++
 		}
-		sink.add(d.Conflict)
+		sink.add(ctx, d.Conflict)
 	}
 	return nil
 }
@@ -669,15 +577,7 @@ func bookmarkValues(b BookmarkRow) map[string]string {
 	return out
 }
 
-// mergeReviews union lịch sử ôn theo guid (KHÔNG LWW — lịch sử append-only) rồi
-// REPLAY lịch ôn cho mọi thẻ bị ảnh hưởng.
-//
-// Replay là bắt buộc: `cards.reps`/`lapses`/`stability`/`due_at` là DẪN XUẤT
-// từ lịch sử. Nạp thêm 2 review của peer mà không replay thì reps sai và
-// `due_at` lệch — lần sync sau 2 máy lại so LWW trên `updated_at` mà mốc đó
-// đã sai từ đầu.
-// `adopted` là alias guid cũ → id thẻ hồi sinh (xem `mergeCards`): giữ cho
-// `reviews`/`notes` của peer mang guid cũ vẫn trỏ đúng thẻ.
+// mergeReviews unions reviews by GUID and recalculates card review schedules.
 func (s *Service) mergeReviews(ctx context.Context, tx Tx, snap domain.PeerSnapshot,
 	sink *conflictSink, now string, merged *Merged, adopted map[string]int64) error {
 	known, err := s.repo.ReviewGUIDs(ctx, tx)
@@ -695,11 +595,10 @@ func (s *Service) mergeReviews(ctx context.Context, tx Tx, snap domain.PeerSnaps
 		}
 		cardID, ok := cardIDByGUID[in.CardGUID]
 		if !ok {
-			// Thẻ cha đã bị hồi sinh dưới guid khác → dùng alias.
 			cardID, ok = adopted[in.CardGUID]
 		}
 		if !ok {
-			continue // card cha chưa map được → bỏ
+			continue
 		}
 		rowToWrite := in
 		rowToWrite.CardID = &cardID
@@ -714,7 +613,6 @@ func (s *Service) mergeReviews(ctx context.Context, tx Tx, snap domain.PeerSnaps
 		affected[cardID] = in.CardGUID
 		merged.Reviews++
 	}
-	// Replay theo id tăng dần để thứ tự ghi ổn định giữa 2 lần chạy.
 	ids := make([]int64, 0, len(affected))
 	for id := range affected {
 		ids = append(ids, id)
@@ -728,7 +626,7 @@ func (s *Service) mergeReviews(ctx context.Context, tx Tx, snap domain.PeerSnaps
 	return nil
 }
 
-// replayCard tính lại lịch 1 thẻ từ toàn bộ lịch sử ôn rồi ghi.
+// replayCard recalculates card review schedule from full review history.
 func (s *Service) replayCard(ctx context.Context, tx Tx, cardID int64, cardGUID, now string,
 	sink *conflictSink) error {
 	revs, err := s.repo.ReviewsOfCard(ctx, tx, cardID)
@@ -738,15 +636,10 @@ func (s *Service) replayCard(ctx context.Context, tx Tx, cardID int64, cardGUID,
 	if len(revs) == 0 {
 		return nil
 	}
-	// Quy tắc replay nằm ở domain/srs.Replay (lịch 1-3-7-14-30 + FSRS-lite),
-	// dùng CHUNG với `srs.Service.RecordReview` — viết lại ở đây là 2 bản lệch
-	// nhau sau vài tháng.
 	parsed := make([]srsdomain.Review, 0, len(revs))
 	for _, r := range revs {
 		at, err := time.Parse(time.RFC3339, r.ReviewedAt)
 		if err != nil {
-			// Review hỏng (timestamp không đọc được) không được làm hỏng cả
-			// merge: coi như xảy ra đúng mốc merge, như v1 đã làm.
 			at, _ = time.Parse(time.RFC3339, now)
 		}
 		parsed = append(parsed, srsdomain.Review{
@@ -760,16 +653,14 @@ func (s *Service) replayCard(ctx context.Context, tx Tx, cardID int64, cardGUID,
 	}, now); err != nil {
 		return fmt.Errorf("replay lịch card %d: %w", cardID, err)
 	}
-	sink.add(&domain.Conflict{
+	sink.add(ctx, &domain.Conflict{
 		Table: domain.TableReviews, GUID: cardGUID, Winner: domain.WinnerLocal,
 		Detail: fmt.Sprintf("reps-recomputed từ %d review", len(revs)), At: now,
 	})
 	return nil
 }
 
-// mergeNotes union note theo guid — KHÔNG dedupe nội dung (2 lần ghi cùng nội
-// dung là 2 note hợp lệ). `card_id` remap qua card guid; card không resolve
-// được → NULL, giữ nội dung thay vì mất.
+// mergeNotes unions notes by GUID.
 func (s *Service) mergeNotes(ctx context.Context, tx Tx, snap domain.PeerSnapshot,
 	sink *conflictSink, merged *Merged, adopted map[string]int64) error {
 	known, err := s.repo.NoteGUIDs(ctx, tx)
@@ -788,14 +679,11 @@ func (s *Service) mergeNotes(ctx context.Context, tx Tx, snap domain.PeerSnapsho
 		if in.CardGUID != "" {
 			id, ok := cardIDByGUID[in.CardGUID]
 			if !ok {
-				// Thẻ cha đã bị hồi sinh dưới guid khác → dùng alias.
 				id, ok = adopted[in.CardGUID]
 			}
 			if ok {
 				rowToWrite.CardID = &id
 			} else {
-				// Card không resolve được → để NULL (note tự do) thay vì bỏ
-				// note: mất ghi chú luyện tập còn tệ hơn mất liên kết.
 				rowToWrite.CardID = nil
 			}
 		}

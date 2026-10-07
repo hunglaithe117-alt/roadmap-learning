@@ -8,11 +8,7 @@ import (
 	domain "langapp/internal/domain/roadmap"
 )
 
-// Validate ở tầng application trả message tiếng Việt, giữ nguyên wording của
-// app v1 (bám decks.go v4) để client không phải đổi xử lý lỗi khi M4 thay
-// net/http bằng Gin. CHECK ở DB là backstop cho mọi rule dưới đây.
-
-// ValidateSlug: trim + lower, chỉ [a-z0-9-], 1..64 ký tự.
+// ValidateSlug normalizes and validates a slug string.
 func ValidateSlug(slug string) (string, error) {
 	s := strings.ToLower(strings.TrimSpace(slug))
 	if s == "" {
@@ -33,8 +29,7 @@ func ValidateSlug(slug string) (string, error) {
 	return s, nil
 }
 
-// ValidateTitle: bắt buộc có chữ sau trim, tối đa 200 ký tự (đếm rune — tiêu
-// đề tiếng Việt có dấu, len() byte sẽ chặn sớm quá mức).
+// ValidateTitle normalizes and validates non-empty title strings up to 200 runes.
 func ValidateTitle(title string) (string, error) {
 	t := strings.TrimSpace(title)
 	if t == "" {
@@ -46,7 +41,7 @@ func ValidateTitle(title string) (string, error) {
 	return t, nil
 }
 
-// ValidateText: nội dung tùy chọn (goal/why/overview/note/status_note).
+// ValidateText validates optional text up to max runes.
 func ValidateText(s string, max int) (string, error) {
 	t := strings.TrimSpace(s)
 	if len([]rune(t)) > max {
@@ -55,9 +50,7 @@ func ValidateText(s string, max int) (string, error) {
 	return t, nil
 }
 
-// ValidateURL: nil/rỗng → nil (SQL NULL). Có giá trị thì phải parse được và
-// scheme http|https — link ftp/javascript: bị từ chối vì UI render thẳng ra
-// href.
+// ValidateURL validates optional http or https URLs.
 func ValidateURL(u *string) (*string, error) {
 	if u == nil {
 		return nil, nil
@@ -80,7 +73,7 @@ func ValidateURL(u *string) (*string, error) {
 	return &s, nil
 }
 
-// ValidateKind: rỗng (tài liệu không phân loại) hoặc 1 trong whitelist 9 kind.
+// ValidateKind validates optional resource kind against allowed kinds.
 func ValidateKind(kind string) (string, error) {
 	k := strings.ToLower(strings.TrimSpace(kind))
 	if k == "" {
@@ -94,14 +87,12 @@ func ValidateKind(kind string) (string, error) {
 	return "", newError(StatusBadRequest, "kind chỉ nhận: %s", strings.Join(AllKinds, ", "))
 }
 
-// AllKinds là whitelist kind tài liệu — trùng `roadmap` domain nhưng khai báo
-// cục bộ để validate message ở đây không cần import domain.
+// AllKinds lists allowed resource kinds.
 var AllKinds = []string{
 	"video", "article", "tool", "app", "book", "course", "site", "podcast", "channel",
 }
 
-// ValidateLanguage: seed là contract zh|en, nhưng user tạo path thì nhận chuỗi
-// tự do tối đa 16 ký tự (vd "zh-Hans", "vi"). Rỗng → "zh" (giữ hành vi v1).
+// ValidateLanguage validates language code up to 16 characters.
 func ValidateLanguage(lang string) (string, error) {
 	l := strings.ToLower(strings.TrimSpace(lang))
 	if l == "" {
@@ -113,9 +104,7 @@ func ValidateLanguage(lang string) (string, error) {
 	return l, nil
 }
 
-// ValidateStatus: status bắt buộc + status_note tùy chọn. Chỉ trim, KHÔNG hạ
-// chữ hoa — contract đóng 4 giá trị, "DONE" phải là 400 để lỗi client lộ ra
-// sớm thay vì im lặng trở thành "done".
+// ValidateStatus validates required status and optional note.
 func ValidateStatus(status *string, note *string) (Status, string, error) {
 	if status == nil {
 		return "", "", newError(StatusBadRequest,
@@ -136,7 +125,7 @@ func ValidateStatus(status *string, note *string) (Status, string, error) {
 	return s, n, nil
 }
 
-// ValidatePosition: position >= 0 (CHECK ở DB chặn sớm hơn 1 tầng).
+// ValidatePosition checks position is non-negative.
 func ValidatePosition(p int) error {
 	if p < 0 {
 		return newError(StatusBadRequest, "position không được âm")
@@ -144,7 +133,7 @@ func ValidatePosition(p int) error {
 	return nil
 }
 
-// ValidateDurationWeeks: >= 0, tương tự position.
+// ValidateDurationWeeks checks duration_weeks is non-negative.
 func ValidateDurationWeeks(w int) error {
 	if w < 0 {
 		return newError(StatusBadRequest, "duration_weeks không được âm")
@@ -152,7 +141,7 @@ func ValidateDurationWeeks(w int) error {
 	return nil
 }
 
-// ValidateIsOptional: chỉ nhận 0|1. Giá trị khác là dữ liệu hỏng, không đoán.
+// ValidateIsOptional validates optional boolean flag (0 or 1).
 func ValidateIsOptional(v int) (int, error) {
 	if v == 0 || v == 1 {
 		return v, nil
@@ -160,8 +149,7 @@ func ValidateIsOptional(v int) (int, error) {
 	return 0, newError(StatusBadRequest, "is_optional chỉ nhận 0 hoặc 1")
 }
 
-// ValidateOptionalFlag là ValidateIsOptional nhận con trỏ: nil = client không
-// gửi field ⇒ 0 (bắt buộc), vì CHECK của cột cũng là NOT NULL DEFAULT 0.
+// ValidateOptionalFlag validates optional boolean flag pointer.
 func ValidateOptionalFlag(v *int) (int, error) {
 	if v == nil {
 		return 0, nil
@@ -169,8 +157,7 @@ func ValidateOptionalFlag(v *int) (int, error) {
 	return ValidateIsOptional(*v)
 }
 
-// ValidateBookmarkStatus: trạng thái kho link. Rỗng → `to_read` (DEFAULT của
-// cột), sai thì 400 liệt kê đủ 4 hằng.
+// ValidateBookmarkStatus validates bookmark status string.
 func ValidateBookmarkStatus(raw string) (string, error) {
 	s, err := domain.ParseBookmarkStatus(raw)
 	if err != nil {
@@ -179,8 +166,7 @@ func ValidateBookmarkStatus(raw string) (string, error) {
 	return string(s), nil
 }
 
-// ValidateBookmarkTags: chuẩn hoá + kiểm tra danh sách tag trả về CSV để ghi.
-// Rỗng → "" (không phải ",") để khớp DEFAULT của cột `tags` NOT NULL.
+// ValidateBookmarkTags normalizes and encodes bookmark tags.
 func ValidateBookmarkTags(in []string) (string, error) {
 	tags, err := domain.NormalizeTags(in)
 	if err != nil {
@@ -189,7 +175,7 @@ func ValidateBookmarkTags(in []string) (string, error) {
 	return domain.EncodeTags(tags), nil
 }
 
-// ValidateTagFilter: tham số `tag` của `ListBookmarks`. Rỗng = không lọc.
+// ValidateTagFilter normalizes the tag filter for bookmark listing.
 func ValidateTagFilter(raw string) (string, error) {
 	tag, err := domain.NormalizeTagFilter(raw)
 	if err != nil {
@@ -198,9 +184,7 @@ func ValidateTagFilter(raw string) (string, error) {
 	return tag, nil
 }
 
-// ValidateMapCoord: toạ độ node bản đồ (migration 00004). nil = để server
-// layout. Giá trị set phải nằm trong viewBox 0 0 1000 2000 — node ngoài canvas
-// thì M6 không scroll tới được, mà DB vẫn nhận giá trị là lỗi âm thầm.
+// ValidateMapCoord validates map coordinate bounds.
 func ValidateMapCoord(v *float64, axisName string, max float64) (*float64, error) {
 	if v == nil {
 		return nil, nil

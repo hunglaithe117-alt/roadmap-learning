@@ -10,6 +10,7 @@ package platform_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -52,17 +53,17 @@ func Test_migrate_up_creates_expected_schema(t *testing.T) {
 	db, schema := openBareTestDB(t)
 
 	status := lockAndMigrate(t, db)
-	// 5 migration: 00001 init + 00002 fts + 00003 roadmap_a1 + 00004 roadmap_map
-	// + 00005 insight_index.
+	// 6 migration: 00001 init + 00002 fts + 00003 roadmap_a1 + 00004 roadmap_map
+	// + 00005 insight_index + 00006 roadmap_map_horizontal.
 	// Con số phải bằng số file .sql trong api/migrations/ — thêm migration mà
 	// quên cập nhật là test đỏ, đúng ý đồ.
-	assert.EqualValues(t, 5, status.Applied, "phải apply 5 migration")
-	assert.EqualValues(t, 5, status.Version)
+	assert.EqualValues(t, 6, status.Applied, "phải apply 6 migration")
+	assert.EqualValues(t, 6, status.Version)
 
-	// goose tạo sẵn 1 row version_id = 0 làm mốc, nên bảng có 4 + 1 dòng.
+	// goose tạo sẵn 1 row version_id = 0 làm mốc, nên bảng có 5 + 1 dòng.
 	var distinct int
 	require.NoError(t, db.Raw("SELECT COUNT(DISTINCT version_id) FROM goose_db_version WHERE is_applied").Scan(&distinct).Error)
-	assert.Equal(t, 6, distinct, "goose_db_version phải có version 0 (mốc) + 1..5")
+	assert.Equal(t, 7, distinct, "goose_db_version phải có version 0 (mốc) + 1..6")
 
 	for _, table := range []string{
 		"decks", "cards", "reviews", "notes", "dict", "en_dict",
@@ -83,24 +84,24 @@ func Test_migrate_up_creates_expected_schema(t *testing.T) {
 	var total int
 	require.NoError(t, db.Raw(
 		"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?", schema).Scan(&total).Error)
-	assert.Equal(t, 16, total, "tổng số bảng trong schema sau 5 migration")
+	assert.Equal(t, 16, total, "tổng số bảng trong schema sau 6 migration")
 }
 
 func Test_migrate_up_twice_is_idempotent(t *testing.T) {
 	db, _ := openBareTestDB(t)
 
 	first := lockAndMigrate(t, db)
-	assert.EqualValues(t, 5, first.Applied)
+	assert.EqualValues(t, 6, first.Applied)
 
 	second, err := platform.Migrate(context.Background(), db)
 	require.NoError(t, err, "chạy Up lần 2 phải không lỗi")
 	assert.EqualValues(t, 0, second.Applied, "lần 2 không có migration mới")
 
-	// Goose giữ 1 row version_id = 0 làm mốc, nên bảng có 6 dòng applied
-	// sau 5 migration. Điều cần chứng minh là chạy lại KHÔNG sinh row mới.
+	// Goose giữ 1 row version_id = 0 làm mốc, nên bảng có 7 dòng applied
+	// sau 6 migration. Điều cần chứng minh là chạy lại KHÔNG sinh row mới.
 	var applied int
 	require.NoError(t, db.Raw("SELECT COUNT(*) FROM goose_db_version WHERE is_applied").Scan(&applied).Error)
-	assert.Equal(t, 6, applied, "chạy Up lần 2 không được ghi thêm version")
+	assert.Equal(t, 7, applied, "chạy Up lần 2 không được ghi thêm version")
 }
 
 // Test_touch_updated_trigger_sets_now_guard: contract của trigger
@@ -235,10 +236,14 @@ func Test_reviews_grade_check_rejects_out_of_range(t *testing.T) {
 			cardID, grade, uuid.NewString()).Error
 	}
 	for _, g := range []int{1, 2, 3, 4} {
-		require.NoError(t, insert(g), "grade %d phải hợp lệ", g)
+		t.Run(fmt.Sprintf("grade %d hợp lệ", g), func(t *testing.T) {
+			require.NoError(t, insert(g), "grade %d phải hợp lệ", g)
+		})
 	}
 	for _, g := range []int{0, 5, -1} {
-		assert.Error(t, insert(g), "grade %d ngoài thang 1-4 phải bị CHECK chặn", g)
+		t.Run(fmt.Sprintf("grade %d bị chặn", g), func(t *testing.T) {
+			assert.Error(t, insert(g), "grade %d ngoài thang 1-4 phải bị CHECK chặn", g)
+		})
 	}
 }
 
@@ -266,8 +271,10 @@ func Test_search_functions_reject_like_wildcards(t *testing.T) {
 	}
 
 	for _, q := range []string{"%", "_", "%_", "", "   ", "%%%", `\`} {
-		assert.Equal(t, 0, countDict(q), "dict_search(%q) phải trả 0 dòng, không phải toàn bảng", q)
-		assert.Equal(t, 0, countEn(q), "en_dict_search(%q) phải trả 0 dòng, không phải toàn bảng", q)
+		t.Run(q, func(t *testing.T) {
+			assert.Equal(t, 0, countDict(q), "dict_search(%q) phải trả 0 dòng, không phải toàn bảng", q)
+			assert.Equal(t, 0, countEn(q), "en_dict_search(%q) phải trả 0 dòng, không phải toàn bảng", q)
+		})
 	}
 
 	// Wildcard lẫn ký tự thật vẫn phải tra được (chỉ khử `%`/`_`, không cắt cụt).

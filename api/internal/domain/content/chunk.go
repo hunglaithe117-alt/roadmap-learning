@@ -1,22 +1,20 @@
+// Package content provides language content domain models, dictionary lookups, and pronunciation helpers.
 package content
 
 import "strings"
 
-// ChunkKind phân loại từ trong chunking: content (từ nội dung, đọc mạnh) hoặc
-// function (giới từ, mạo từ, trợ động từ — đọc nhẹ).
+// Chunk classification kinds.
 const (
 	ChunkContent  = "content"
 	ChunkFunction = "function"
 )
 
-// Chunk là 1 từ của câu đã tách, kèm loại content/function.
+// Chunk represents a tokenized word classified as content or function.
 type Chunk struct {
 	Text string
 	Kind string
 }
 
-// functionWords là từ chức năng bị giảm trọng âm (mạo từ, giới từ, phó từ,
-// trợ động từ, liên từ, dạng từ).
 var functionWords = map[string]bool{
 	"a": true, "an": true, "the": true,
 	"i": true, "you": true, "he": true, "she": true, "it": true,
@@ -36,9 +34,7 @@ var functionWords = map[string]bool{
 	"not": true, "no": true, "up": true, "out": true, "about": true,
 }
 
-// SplitChunks tách câu thành content/function. Quy tắc cố ý đơn giản (so với
-// danh sách từ chức năng): KHÔNG phân giải từ đa nghĩa (heteronym) hay ngữ
-// cảnh cụm từ — caller hiển thị trọng âm dict cho headword.
+// SplitChunks divides a sentence into content and function word chunks.
 func SplitChunks(sentence string) []Chunk {
 	words := strings.Fields(sentence)
 	out := make([]Chunk, 0, len(words))
@@ -53,8 +49,7 @@ func SplitChunks(sentence string) []Chunk {
 	return out
 }
 
-// ContentWords trả về danh sách từ nội dung — dùng để dựng câu drill PVO
-// và đo tỉ lệ đúng trong diff.
+// ContentWords extracts only content words from a sentence.
 func ContentWords(sentence string) []string {
 	chunks := SplitChunks(sentence)
 	out := make([]string, 0, len(chunks))
@@ -65,3 +60,4 @@ func ContentWords(sentence string) []string {
 	}
 	return out
 }
+

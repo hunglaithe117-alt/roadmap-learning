@@ -1,25 +1,28 @@
 package srs
 
-// Grade là điểm user chấm cho 1 lần ôn, thang 1-4 (thang điểm dành cho
-// user mới; 0 và 5 là khoảng dự phòng cho SRS mở rộng, KHÔNG nhận ở API).
+// Grade represents the user-selected review quality grade on a scale of 1-4.
 type Grade int
 
-// Thang điểm — hợp đồng đóng băng với UI (xem api/srs.go v1).
 const (
-	GradeAgain Grade = 1 // Quên
-	GradeHard  Grade = 2 // Khó
-	GradeGood  Grade = 3 // Được
-	GradeEasy  Grade = 4 // Dễ
+	// GradeAgain indicates complete failure to recall.
+	GradeAgain Grade = 1
+	// GradeHard indicates significant difficulty during recall.
+	GradeHard Grade = 2
+	// GradeGood indicates successful recall with standard effort.
+	GradeGood Grade = 3
+	// GradeEasy indicates immediate and effortless recall.
+	GradeEasy Grade = 4
 
-	// MinGrade / MaxGrade là khoảng hợp lệ API nhận (1-4).
+	// MinGrade is the minimum valid review grade.
 	MinGrade Grade = GradeAgain
+	// MaxGrade is the maximum valid review grade.
 	MaxGrade Grade = GradeEasy
 )
 
-// Valid báo grade có nằm trong thang 1-4 không.
+// Valid reports whether the grade falls within the supported 1-4 range.
 func (g Grade) Valid() bool { return g >= MinGrade && g <= MaxGrade }
 
-// String là nhãn tiếng Việt dùng cho thông báo lỗi.
+// String returns the string representation of the grade.
 func (g Grade) String() string {
 	switch g {
 	case GradeAgain:
@@ -34,3 +37,5 @@ func (g Grade) String() string {
 		return "không hợp lệ"
 	}
 }
+
+

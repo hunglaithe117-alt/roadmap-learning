@@ -85,7 +85,7 @@ type Topic {
 
   """Trạng thái node suy ra từ chuỗi node trước đó TRONG CÙNG stage. Lấy từ application service, không tính lại ở đây."""
   level: LevelState!
-  """Toạ độ node trong viewBox 0 0 1000 2000, do `domain/roadmap.ComputeLayout` tính."""
+  """Toạ độ node trong canvas của stage — bề rộng động theo số node, chiều cao cố định — do `domain/roadmap.ComputeLayout` tính."""
   point: MapPoint!
   """true = user đã đặt tay toạ độ (mapX/mapY khác null)."""
   mapPinned: Boolean!
@@ -202,7 +202,7 @@ input TopicInput {
   position: Int
   """0 = bắt buộc, 1 = tham khảo. null = 0 (bắt buộc), khớp DEFAULT của cột."""
   isOptional: Int
-  """null = để server layout. Ngoài viewBox 0 0 1000 2000 bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được)."""
+  """null = để server layout. Ngoài biên canvas bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được)."""
   mapX: Float
   mapY: Float
 }

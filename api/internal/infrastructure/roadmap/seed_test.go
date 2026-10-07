@@ -66,21 +66,31 @@ func Test_seed_assigns_terrain_and_direction_per_roadmap_map_idea(t *testing.T) 
 	for _, r := range rows {
 		got[r.Slug] = [2]string{r.Terrain, r.Direction}
 	}
+	// MỌI stage đều `right` (đổi 2026-09-29): bản đồ roadmap đi ngang kiểu
+	// roadmap.sh. Bảng cũ có 7 stage `up` — gồm G0 của CẢ 2 path — nên landing
+	// view luôn mở chặng `up` (dải dọc 261×1952 trong khung 1377×620).
 	want := map[string][2]string{
-		// Trung: meadow → meadow → desert → snow → volcano, đi dọc hết.
-		"zh-g0": {"meadow", "up"},
-		"zh-g1": {"meadow", "up"},
-		"zh-g2": {"desert", "up"},
-		"zh-g3": {"snow", "up"},
-		"zh-g4": {"volcano", "up"},
-		// Anh: meadow → ocean → city → snow → volcano, đổi sang ngang từ G2.
-		"en-g0": {"meadow", "up"},
-		"en-g1": {"ocean", "up"},
+		// Trung: meadow → meadow → desert → snow → volcano.
+		"zh-g0": {"meadow", "right"},
+		"zh-g1": {"meadow", "right"},
+		"zh-g2": {"desert", "right"},
+		"zh-g3": {"snow", "right"},
+		"zh-g4": {"volcano", "right"},
+		// Anh: meadow → ocean → city → snow → volcano.
+		"en-g0": {"meadow", "right"},
+		"en-g1": {"ocean", "right"},
 		"en-g2": {"city", "right"},
 		"en-g3": {"snow", "right"},
 		"en-g4": {"volcano", "right"},
 	}
 	assert.Equal(t, want, got, "bảng terrain/direction phải khớp ROADMAP-MAP-IDEA §6")
+
+	// Hàng rào riêng cho hướng: bảng trên vẫn xanh nếu cả 10 stage cùng đổi
+	// sang một hướng khác, nên assert thẳng "không stage nào còn `up`".
+	var upCount int
+	require.NoError(t, db.Raw(
+		"SELECT COUNT(*) FROM roadmap_stages WHERE direction = 'up'").Scan(&upCount).Error)
+	assert.Zero(t, upCount, "seed KHÔNG được sinh stage `up` — landing view mở `up` là bản đồ dọc hỏng")
 }
 
 // QUY TẮC VÀNG: chạy 2 lần không nhân bản, và không ghi đè nội dung user đã sửa.

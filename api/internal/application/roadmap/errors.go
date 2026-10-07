@@ -5,18 +5,19 @@ import (
 	"fmt"
 )
 
-// Error là lỗi nghiệp vụ mang HTTP status sẵn. Tầng transport (M4) chỉ cần
-// `errors.As(err, &appErr)` rồi `appErr.Status` → không phải dịch lại chuỗi
-// message (làm vỡ khi ai đó đổi wording).
+// Error represents a business error with an associated HTTP status code.
 type Error struct {
 	Status  int
 	Message string
 }
 
+// Error returns the business error message.
 func (e *Error) Error() string { return e.Message }
 
-// Status OK của HTTP, khai báo tại chỗ để application không import net/http
-// (tầng này không được phụ thuộc framework).
+// StatusCode returns the HTTP status code.
+func (e *Error) StatusCode() int { return e.Status }
+
+// HTTP status codes defined locally to avoid importing net/http in the application layer.
 const (
 	StatusOK                  = 200
 	StatusCreated             = 201
@@ -26,18 +27,15 @@ const (
 	StatusInternalServerError = 500
 )
 
-// ErrNotFound là sentinel cho "không tìm thấy" — repository trả về khi row
-// không còn (đã xoá mềm). Use case bọc lại thành *Error 404 với message
-// tiếng Việt của đúng loại nút.
+// ErrNotFound signals that a requested entity was not found.
 var ErrNotFound = errors.New("không tìm thấy")
 
-// newError dựng *Error. Nhãn là tiếng Việt vì đây là thứ user đọc thấy.
+// newError creates an Error instance.
 func newError(status int, format string, args ...any) *Error {
 	return &Error{Status: status, Message: fmt.Sprintf(format, args...)}
 }
 
-// IsNotFound báo err có phải *Error 404 không (transport dùng để log, test
-// dùng để assert).
+// IsNotFound reports whether err represents a 404 not found error.
 func IsNotFound(err error) bool {
 	var e *Error
 	return errors.As(err, &e) && e.Status == StatusNotFound

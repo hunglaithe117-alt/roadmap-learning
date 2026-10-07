@@ -2,24 +2,19 @@ package content
 
 import "strings"
 
-// StressResult là kết quả tra trọng âm 1 từ.
+// StressResult represents the stress lookup result for a word.
 type StressResult struct {
 	Term string
 	IPA  string
-	// Stress là pattern in HOA âm tiết có trọng âm, nối bằng "-"
-	// ("pho-TO-graph").
+	// Stress is the uppercase pattern joined with "-" (e.g. "pho-TO-graph").
 	Stress string
-	// Exception = đây là ngoại lệ / quy tắc đoán, UI phải gắn nhãn "ngoại lệ"
-	// và KHÔNG được coi là chắc chắn.
+	// Exception indicates a word with dual pronunciation or rule-based guess.
 	Exception bool
 	Note      string
-	// Source là "dict" (tra từ điển) hoặc "rule" (suy ra từ quy tắc hậu tố).
-	Source string
+	Source    string
 }
 
-// exceptionWords đánh dấu headwords đa nghĩa: danh/tính từ nhấn âm đầu,
-// động từ nhấn âm sau. Bộ quy tắc KHÔNG được đoán loại này — nó chỉ gắn cờ
-// để UI hiện nhãn "ngoại lệ" và ưu tiên tra dict.
+// exceptionWords maps dual-pronunciation headwords to explanatory notes.
 var exceptionWords = map[string]string{
 	"progress": "ngoại lệ: danh từ /ˈprəʊɡres/, động từ /prəˈɡres/",
 	"present":  "ngoại lệ: danh/tính từ /ˈpreznt/, động từ /prɪˈzent/",
@@ -37,16 +32,11 @@ var exceptionWords = map[string]string{
 	"export":   "ngoại lệ: danh từ /ˈekspɔːt/, động từ /ɪkˈspɔːt/",
 }
 
-// stressShifts là hậu tố khiến trọng âm lùi 1 âm tiết (danh từ phái sinh
-// thường nhấn trước hậu tố: pho-TO-graphy).
 var stressShifts = []string{"tion", "sion", "ic", "ical", "ity", "ogy", "graphy", "nomy", "meter"}
 
-// ruleShiftSuffix là bộ hậu tố hẹp hơn dùng khi đoán từ chưa có trong dict.
 var ruleShiftSuffix = []string{"tion", "sion", "ic", "ity", "ogy", "graphy"}
 
-// StressFromIPA rút pattern in HOA từ IPA bằng cách đánh dấu âm tiết sau ˈ.
-// Chỉ là trợ giúp hiển thị, KHÔNG phải bộ dự đoán — từ chưa biết rơi về
-// LookupStressRule.
+// StressFromIPA extracts an uppercase stress pattern from an IPA string using ˈ marker.
 func StressFromIPA(term, ipa string) string {
 	if !strings.Contains(ipa, "ˈ") {
 		return term
@@ -59,8 +49,7 @@ func StressFromIPA(term, ipa string) string {
 	return joinStress(sylls, idx)
 }
 
-// LookupStressRule là fallback khi từ không có trong en_dict. Trả về pattern
-// đoán + exception=true để UI LUÔN gắn nhãn "ngoại lệ / cần kiểm tra dict".
+// LookupStressRule predicts stress patterns for words not in the dictionary.
 func LookupStressRule(word string) StressResult {
 	key := strings.ToLower(strings.TrimSpace(word))
 	if note, ok := exceptionWords[key]; ok {
@@ -85,13 +74,13 @@ func LookupStressRule(word string) StressResult {
 	}
 }
 
-// Source của StressResult.
+// Stress source constants.
 const (
 	SourceDict = "dict"
 	SourceRule = "rule"
 )
 
-// LookupStress ưu tiên dict (tra qua repository), fallback quy tắc.
+// LookupStress looks up word stress from dictionary entry, falling back to rule heuristic.
 func LookupStress(word string, e EnglishEntry, found bool) StressResult {
 	key := strings.ToLower(strings.TrimSpace(word))
 	if !found {
@@ -104,7 +93,6 @@ func LookupStress(word string, e EnglishEntry, found bool) StressResult {
 	}
 }
 
-// splitSyllables cắt từ theo nhóm nguyên âm liên tiếp (a, e, i, o, u, y).
 func splitSyllables(word string) []string {
 	lower := strings.ToLower(word)
 	var sylls []string
@@ -135,15 +123,11 @@ func splitSyllables(word string) []string {
 	return sylls
 }
 
-// primaryStressIndex ánh xạ vị trí ˈ trong IPA sang chỉ số âm tiết, dùng
-// hậu tố làm tiebreaker.
 func primaryStressIndex(term, ipa string, n int) int {
 	pre := ipa
 	if k := strings.Index(ipa, "ˈ"); k >= 0 {
 		pre = ipa[:k]
 	}
-	// Dấu "ˌ" (nhấn phụ) đứng trước "ˈ" → trọng âm chính lùi 1 âm tiết so
-	// với mặc định.
 	if strings.Contains(pre, "ˌ") {
 		return n - 2
 	}

@@ -3,7 +3,7 @@
 // VÌ SAO cần (STACK-V2 §3 — rủi ro lớn nhất còn lại của kiến trúc 2 protocol):
 //   - dữ liệu JSON đi qua urql (GraphQL `/query`),
 //   - dữ liệu nhị phân đi qua vue-query (`/api/tts`, `/api/stt`,
-//     `/api/backup`, `/api/restore`, `/api/health`).
+//     `/api/health`).
 // Hai cache này **không biết nhau**. Ôn xong 1 thẻ (`recordReview`) mà chỉ
 // invalidate urql thì `DueCards` vẫn trả hàng đợi cũ; ngược lại bấm "Check
 // /api/health" xong mà chỉ invalidate vue-query thì cache GraphQL vẫn cũ.

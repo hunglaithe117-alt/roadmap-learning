@@ -22,19 +22,11 @@ import (
 	"langapp/internal/transport/graphql/model"
 )
 
-// errInvalidSince là lỗi 400 cho tham số `since` sai định dạng.
-var errInvalidSince = errors.New("since phải có dạng YYYY-MM-DD")
-
-// ── id ──────────────────────────────────────────────────────────────────────
-// `ID` sinh ra là `string`, còn id ở application là `int64`. Ép qua
-// strconv thay vì `fmt.Sprint` vì không tạo rác cho 0/đường tròn nhỏ và là
-// đường chuyển đảo được (client gửi lại id string → parse ở resolver).
+// ErrInvalidSince indicates the since parameter does not follow YYYY-MM-DD format.
+var ErrInvalidSince = errors.New("since must be in YYYY-MM-DD format")
 
 func idOf(v int64) string { return strconv.FormatInt(v, 10) }
 
-// parseID đọc `ID` của client. Rỗng / không phải số ⇒ 0, và use case sẽ trả
-// 400 với message tiếng Việt của nó ("id stage không hợp lệ") — đúng đường lỗi
-// nghiệp vụ, không phải lỗi parse tầng transport.
 func parseID(s string) int64 {
 	n, _ := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
 	return n
@@ -55,8 +47,7 @@ func statusOfNode(s string) model.Status {
 	}
 }
 
-// statusText là chiều ngược của `statusOfNode` — mutation gửi enum, application
-// nhận chuỗi hằng.
+// statusText maps a GraphQL Status enum back to application status string.
 func statusText(s model.Status) string {
 	switch s {
 	case model.StatusInProgress:
@@ -70,17 +61,7 @@ func statusText(s model.Status) string {
 	}
 }
 
-// terrainOf dịch giá trị cột `roadmap_stages.terrain` sang enum GraphQL.
-//
-// TÊN HẰNG khớp `domain/roadmap.Terrain*` 1-1. Rời khớp là enum GraphQL và
-// whitelist DB thành 2 nguồn sự thật: `terrainOf` rơi về nhánh `default` cho
-// mọi giá trị lạ, mà `default` là 1 giá trị HỢP LỆ ⇒ `terrain` trả về đúng
-// (sai) mà `Terrain` của DB không có, và `terrainText` ghi ngược lại giá trị
-// mà CHECK constraint của Postgres từ chối. `Test_graphql_terrain_enum_matches_domain`
-// chặn lớp lỗi này ở cả 2 chiều.
-//
-// `MEADOW` là DEFAULT của cột: DB có thể trả "" cho row cũ chưa qua migration,
-// nên "" + giá trị lạ cùng rơi về `MEADOW` chứ không trả 1 enum không tồn tại.
+// terrainOf converts a database terrain string to a GraphQL Terrain enum.
 func terrainOf(s string) model.Terrain {
 	switch domainroadmap.Terrain(s) {
 	case domainroadmap.TerrainDesert:
@@ -98,36 +79,11 @@ func terrainOf(s string) model.Terrain {
 	}
 }
 
-// terrainText là chiều ngược của `terrainOf`.
-//
-// BA trạng thái phải phân biệt được — gộp 2 trong 1 là MẤT DỮ LIỆU Ở CHIỀU
-// GHI:
-//
-//	nil (client không gửi)      → ("", nil). Tạo stage: lấy DEFAULT của cột.
-//	                              PATCH: không đụng cột.
-//	MEADOW                       → ("", nil). `ParseTerrain("")` trả DEFAULT =
-//	                              "meadow", nên chọn MEADOW vẫn ghi đúng "meadow"
-//	                              (khác hẳn "không gửi" ở PATCH).
-//	giá trị KHÔNG map được      → LỖI 400.
-//
-// Lý do phải TỪ CHỐI thay vì trả "": trước đây `default` trả `""`, và
-// `application/roadmap.parseMapField` đưa `""` qua `domain.ParseTerrain` —
-// hàm đó coi rỗng là "lấy DEFAULT" và trả `meadow` **KHÔNG LỖI**. Hệ quả:
-// client chọn 1 địa hình mà `switch` chưa biết (thêm giá trị thứ 7 vào schema
-// mà quên cập nhật hàm này) ⇒ server lưu `meadow`, **không có tín hiệu nào cho
-// user**, và `updated_at` vẫn đổi nên còn bị đẩy qua sync. Test
-// `Test_terrain_text_rejects_value_it_cannot_map` chặn đúng đường này.
-//
-// `nil` và `MEADOW` cùng trả `""` là CỐ Ý (xem 2 dòng trên), KHÔNG phải lười
-// gộp: chúng khác nhau ở tầng application — `ParseTerrain` biết "" nghĩa là
-// DEFAULT. Điểm cần canh là giá trị KHÔNG MAP ĐƯỢC không được rơi vào nhóm đó.
+// terrainText maps a GraphQL Terrain enum back to a database terrain string.
 func terrainText(t *model.Terrain) (string, error) {
 	if t == nil {
 		return "", nil
 	}
-	// So sánh theo TÊN HẰNG enum, không theo `strings.ToLower(*t)`: `convert.go`
-	// ở đây là ranh giới tin cậy đầu tiên sau CHECK constraint của Postgres, nên
-	// nó phải từ chối thay vì đoán.
 	switch *t {
 	case model.TerrainDesert:
 		return string(domainroadmap.TerrainDesert), nil
@@ -140,18 +96,14 @@ func terrainText(t *model.Terrain) (string, error) {
 	case model.TerrainCity:
 		return string(domainroadmap.TerrainCity), nil
 	case model.TerrainMeadow:
-		// DEFAULT của cột: `ParseTerrain("")` sẽ gán lại "meadow". Ghi "meadow"
-		// tường minh cũng đúng, nhưng làm mỗi patch đổi `updated_at` và đẩy node
-		// qua sync vô ích.
 		return "", nil
 	default:
-		return "", errBadRequest(fmt.Errorf("terrain %q không map được sang giá trị lưu trong DB (giá trị hợp lệ: %s)",
+		return "", errBadRequest(fmt.Errorf("terrain %q cannot be mapped to database value (valid values: %s)",
 			string(*t), strings.Join(terrainNames(), ", ")))
 	}
 }
 
-// terrainNames liệt kê 6 giá trị hợp lệ cho message lỗi — liệt kê đủ để client
-// hiện được lựa chọn đúng, thay vì bắt user đoán.
+// terrainNames lists all valid terrain values for client error reporting.
 func terrainNames() []string {
 	out := make([]string, 0, len(domainroadmap.AllTerrains))
 	for _, t := range domainroadmap.AllTerrains {
@@ -167,12 +119,7 @@ func directionOf(s string) model.Direction {
 	return model.DirectionUp
 }
 
-// directionText là chiều ngược của `directionOf`, tách 3 trạng thái y hệt
-// `terrainText` — xem lý do ở đó.
-//
-// Ở đây hậu quả NẶNG HƠN `terrain`: giá trị chưa biết trước đây rơi về
-// `"right"`, tức là KHÔNG phải DEFAULT — client chọn hướng đi X, server lưu
-// "right" im lặng, bản đồ vẽ sai chiều cuộn mà không có lỗi nào.
+// directionText maps a GraphQL Direction enum back to a database direction string.
 func directionText(d *model.Direction) (string, error) {
 	if d == nil || *d == model.DirectionUp {
 		return "", nil
@@ -180,7 +127,7 @@ func directionText(d *model.Direction) (string, error) {
 	if *d == model.DirectionRight {
 		return string(domainroadmap.DirectionRight), nil
 	}
-	return "", errBadRequest(fmt.Errorf("direction %q không map được sang giá trị lưu trong DB (giá trị hợp lệ: %s, %s)",
+	return "", errBadRequest(fmt.Errorf("direction %q cannot be mapped to database value (valid values: %s, %s)",
 		string(*d), domainroadmap.DirectionUp, domainroadmap.DirectionRight))
 }
 
@@ -327,9 +274,6 @@ func thieuAxesView(axes []domaincontent.THIEUAxis) []model.ThieuAxis {
 }
 
 func thieuScoresView(scores map[string]int) []model.ThieuScore {
-	// Sắp theo mã trục A..H để client nhận list ổn định giữa 2 lần gọi —
-	// duyệt map là thứ tự NGẪU NHIÊN, và checklist 8 dòng mà nhảy thứ tự thì
-	// không chấm được.
 	keys := make([]string, 0, len(scores))
 	for k := range scores {
 		keys = append(keys, k)
@@ -375,7 +319,6 @@ func readerArticleViews(in []contentapp.StaticReaderArticle) []model.ReaderArtic
 	return out
 }
 
-// strokeInfoView dựng `StrokeInfo` từ 2 mảng DTO tĩnh mà use case trả về.
 func strokeInfoView(info contentapp.StaticStrokeInfo) *model.StrokeInfo {
 	steps := make([]model.StrokeStep, 0, len(info.Strokes))
 	for _, s := range info.Strokes {
@@ -411,9 +354,6 @@ func pathView(p roadmapapp.Path) model.Path {
 		IsBuiltin: p.IsBuiltin,
 		CreatedAt: p.CreatedAt,
 		UpdatedAt: p.UpdatedAt,
-		// Stages/Progress để nil: 2 resolver sau (Path.stages, Path.progress)
-		// gọi loader và tự điền. Điền sẵn ở đây là nghĩa là phải đọc cây ở
-		// Query.path, tức loader thành vô nghĩa.
 	}
 }
 
@@ -490,9 +430,7 @@ func milestoneView(m roadmapapp.Milestone) model.Milestone {
 	}
 }
 
-// bookmarkStatusOf là chiều application → enum. `default` trả TO_READ vì đó là
-// DEFAULT của cột, và tầng application đã chặn mọi giá trị ngoài whitelist
-// trước khi tới đây.
+// bookmarkStatusOf maps a database bookmark status string to a GraphQL BookmarkStatus enum.
 func bookmarkStatusOf(s string) model.BookmarkStatus {
 	switch s {
 	case "reading":
@@ -506,40 +444,11 @@ func bookmarkStatusOf(s string) model.BookmarkStatus {
 	}
 }
 
-// bookmarkStatusText là chiều ngược của `bookmarkStatusOf`, tách 3 trạng thái
-// y hệt `terrainText` — xem lý do ở đó.
-//
-//	nil (client không gửi)   → ("", nil). Create: `ValidateBookmarkStatus("")`
-//	                            → `ParseBookmarkStatus("")` → DEFAULT `to_read`.
-//	                            Lọc `bookmarks`: "" = KHÔNG lọc.
-//	giá trị hợp lệ          → (tên hằng domain, nil), kể cả `TO_READ`.
-//	giá trị KHÔNG map được  → ("", LỖI 400) kèm liệt kê đủ 4 giá trị hợp lệ.
-//
-// Trước đây `default` trả `"to_read"` cho MỌI giá trị lạ. Hôm nay enum
-// GraphQL khớp domain 1-1 (4 hằng) và `enum_contract_test.go` khoá, nên nhánh
-// lạ **chưa kích hoạt được từ client** — nhưng nó là đúng cơ chế F1 (M4):
-// im lặng biến giá trị lạ thành giá trị HỢP LỆ, không có tín hiệu nào cho
-// user. Nó kích hoạt ngay khi ai đó thêm status thứ 5 vào `enum BookmarkStatus`
-// mà quên dòng ở đây: client chọn status mới, server lưu `to_read`, UI hiện
-// "Chưa đọc", và vì `updated_at` vẫn đổi nên dòng đó còn bị đẩy qua sync.
-//
-// `TO_READ` trả TƯỜNG MINH `"to_read"` chứ không rút về `""` như `MEADOW` bên
-// `terrainText` — 2 lý do, cùng một nguyên tắc "đừng gộp 2 thứ khác nhau":
-//
-//  1. `Bookmarks` dùng `""` làm "KHÔNG lọc" (`BookmarkFilter.Status` rỗng =
-//     không lọc). Nếu `TO_READ` → `""` thì lọc `status: TO_READ` trả về MỌI
-//     bookmark — sai lặng, và là sai kiểu dữ liệu chứ không phải sai hiển
-//     thị.
-//  2. `TO_READ` là DEFAULT của cột, nhưng khác `meadow` ở chỗ nó KHÔNG phải
-//     "trạng thái vô nghĩa": bookmark ở `to_read` là kết quả người dùng chọn,
-//     và ghi tường minh không làm patch nào tốn `updated_at` vô ích.
+// bookmarkStatusText maps a GraphQL BookmarkStatus enum back to a database bookmark status string.
 func bookmarkStatusText(s *model.BookmarkStatus) (string, error) {
 	if s == nil {
 		return "", nil
 	}
-	// So sánh theo TÊN HẰNG enum, không theo `strings.ToLower(*s)`: `convert.go`
-	// ở đây là ranh giới tin cậy đầu tiên sau CHECK constraint của Postgres,
-	// nên nó phải từ chối thay vì đoán.
 	switch *s {
 	case model.BookmarkStatusToRead:
 		return string(domainroadmap.BookmarkToRead), nil
@@ -550,14 +459,12 @@ func bookmarkStatusText(s *model.BookmarkStatus) (string, error) {
 	case model.BookmarkStatusArchived:
 		return string(domainroadmap.BookmarkArchived), nil
 	default:
-		return "", errBadRequest(fmt.Errorf("status bookmark %q không map được sang giá trị lưu trong DB (giá trị hợp lệ: %s)",
+		return "", errBadRequest(fmt.Errorf("bookmark status %q cannot be mapped to database value (valid values: %s)",
 			string(*s), strings.Join(bookmarkStatusNames(), ", ")))
 	}
 }
 
-// bookmarkStatusNames liệt kê 4 giá trị hợp lệ cho message lỗi — cùng vai trò
-// với `terrainNames`: liệt kê đủ để client hiện được lựa chọn đúng thay vì bắt
-// user đoán.
+// bookmarkStatusNames lists all valid bookmark statuses for client error reporting.
 func bookmarkStatusNames() []string {
 	out := make([]string, 0, len(domainroadmap.AllBookmarkStatuses))
 	for _, s := range domainroadmap.AllBookmarkStatuses {
@@ -741,14 +648,10 @@ func mergeResultView(r syncapp.MergeResult, err error) *model.MergeResult {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
-// decodeTags tách cột `tags` (CSV) ra mảng. Cột hỏng (dữ liệu peer viết tay)
-// trả rỗng thay vì lỗi: 1 bookmark có tag lạ không được làm hỏng cả màn kho
-// link. Bản thuần của hàm này là `domain/roadmap.DecodeTags`.
+// decodeTags splits a CSV tag string into a string slice.
 func decodeTags(csv string) []string { return domainroadmap.DecodeTags(csv) }
 
-// decodeActivities tách cột `activities` (JSON array string) ra mảng.
-// Cột hỏng (không phải JSON, hoặc JSON không phải mảng chuỗi) trả rỗng thay
-// vì lỗi: 1 topic seed hỏng không được làm hỏng cả cây roadmap.
+// decodeActivities unmarshals a JSON array of activity strings.
 func decodeActivities(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -764,8 +667,7 @@ func decodeActivities(raw string) []string {
 	return out
 }
 
-// orEmpty trả slice rỗng thay vì nil cho field `[]T!` — GraphQL phân biệt null
-// với [], và client đếm `.length` sẽ crash nếu nhận null.
+// orEmpty returns an empty slice if the input is nil.
 func orEmpty[T any](in []T) []T {
 	if in == nil {
 		return []T{}
@@ -773,31 +675,22 @@ func orEmpty[T any](in []T) []T {
 	return in
 }
 
-// conflictViews chuyển log xung đột của domain sang view model.
-//
-// Domain KHÔNG lưu 2 bản (local/incoming) của 1 field xung đột — nó chỉ ghi
-// ai thắng + chi tiết. Vì vậy `local`/`incoming`/`field` trả "" thay vì bịa:
-// client hiện `winner` + `detail` là đủ, và 3 cột rỗng nói "không có" rõ ràng
-// hơn là 3 cột giả.
+// conflictViews maps domain conflicts into view models.
 func conflictViews(in []domainsync.Conflict) []model.Conflict {
 	out := make([]model.Conflict, 0, len(in))
 	for _, c := range in {
 		out = append(out, model.Conflict{
-			GUID:   c.GUID,
-			Table:  string(c.Table),
-			Winner: c.Winner,
-			Detail: c.Detail,
-			// `At` là mốc client nhận, không phải `resolvedAt` — merge tự
-			// chọn người thắng ngay lúc ghi, không có bước "resolve" sau.
+			GUID:       c.GUID,
+			Table:      string(c.Table),
+			Winner:     c.Winner,
+			Detail:     c.Detail,
 			ResolvedAt: c.At,
 		})
 	}
 	return out
 }
 
-// parseSince đọc tham số `since` dạng YYYY-MM-DD. Rỗng = không tính khoảng.
-// Sai định dạng trả lỗi tường minh thay vì âm thầm coi như hôm nay — sai
-// định dạng mà ra số liệu tiến độ sai thì tệ hơn là báo lỗi.
+// parseSince parses a YYYY-MM-DD date string.
 func parseSince(s string) (*time.Time, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -805,7 +698,7 @@ func parseSince(s string) (*time.Time, error) {
 	}
 	t, err := time.Parse("2006-01-02", s)
 	if err != nil {
-		return nil, errInvalidSince
+		return nil, ErrInvalidSince
 	}
 	return &t, nil
 }

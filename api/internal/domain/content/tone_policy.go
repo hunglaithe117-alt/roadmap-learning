@@ -1,38 +1,30 @@
 package content
 
-// ErrTone là lỗi thuần của bộ thanh điệu, để transport map sang 400 mà không
-// cần biết chi tiết (dùng errors.As với type này).
-type ErrTone string
+// ToneError represents an error during tone parsing or validation.
+type ToneError string
 
-func (e ErrTone) Error() string { return string(e) }
+// Error implements the error interface.
+func (e ToneError) Error() string { return string(e) }
 
-func errTone(msg string) error { return ErrTone(msg) }
+func errTone(msg string) error { return ToneError(msg) }
 
-// ToneGrade là điểm SRS mà GradeTonePair trả về — dùng lại đúng thang của
-// bounded context `srs` (1-4) nhưng khai báo cục bộ để `content` không import
-// ngược `srs` (hai context độc lập, chỉ gặp nhau ở application/ports.go).
+// SRS grade constants for tone grading (aligned with srs.Grade 1-4).
 const (
-	toneGradeAgain = 1 // Quên
-	toneGradeHard  = 2 // Khó
-	toneGradeGood  = 3 // Được
-	toneGradeEasy  = 4 // Dễ
+	toneGradeAgain = 1
+	toneGradeHard  = 2
+	toneGradeGood  = 3
+	toneGradeEasy  = 4
 )
 
-// ToneGradeResult là kết quả chấm 1 cặp thanh.
+// ToneGradeResult represents the evaluation result of a tone pair answer.
 type ToneGradeResult struct {
-	// Grade là điểm SRS 1-4 theo tỉ lệ trùng.
 	Grade int
-	// Score là tỉ lệ âm tiết trùng (0-1).
 	Score float64
-	// Exact = trùng toàn bộ.
 	Exact bool
-	// Hit là số âm tiết trùng.
-	Hit int
+	Hit   int
 }
 
-// GradeTonePair chấm đáp án so với mẫu: trùng hết -> 4 (Dễ), >= 1/2 ->
-// 3 (Được), có trùng -> 2 (Khó), không trùng -> 1 (Quên). Cặp 1 âm tiết:
-// trùng -> 4, sai -> 1.
+// GradeTonePair compares answered tones against expected tones and returns a GradeToneResult.
 func GradeTonePair(expected, answered string) (ToneGradeResult, error) {
 	exp, err := ParseToneSequence(expected)
 	if err != nil {

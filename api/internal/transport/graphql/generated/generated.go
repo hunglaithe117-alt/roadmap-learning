@@ -4163,7 +4163,7 @@ enum ErrorCode {
   BAD_REQUEST
   NOT_FOUND
   CONFLICT
-  """Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ ` + "`" + `mutation.sync` + "`" + ` khi chưa cấu hình nguồn snapshot peer, ` + "`" + `/api/backup` + "`" + ` trước khi có ` + "`" + `pg_dump` + "`" + `. Thêm hằng thứ 5 mà quên ` + "`" + `codeForStatus` + "`" + ` sẽ rơi về INTERNAL và che message tiếng Việt."""
+  """Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ ` + "`" + `mutation.sync` + "`" + ` khi chưa cấu hình nguồn snapshot peer. Thêm hằng thứ 5 mà quên ` + "`" + `codeForStatus` + "`" + ` sẽ rơi về INTERNAL và che message tiếng Việt."""
   NOT_IMPLEMENTED
   INTERNAL
 }
@@ -4588,7 +4588,7 @@ type Topic {
 
   """Trạng thái node suy ra từ chuỗi node trước đó TRONG CÙNG stage. Lấy từ application service, không tính lại ở đây."""
   level: LevelState!
-  """Toạ độ node trong viewBox 0 0 1000 2000, do ` + "`" + `domain/roadmap.ComputeLayout` + "`" + ` tính."""
+  """Toạ độ node trong canvas của stage — bề rộng động theo số node, chiều cao cố định — do ` + "`" + `domain/roadmap.ComputeLayout` + "`" + ` tính."""
   point: MapPoint!
   """true = user đã đặt tay toạ độ (mapX/mapY khác null)."""
   mapPinned: Boolean!
@@ -4705,7 +4705,7 @@ input TopicInput {
   position: Int
   """0 = bắt buộc, 1 = tham khảo. null = 0 (bắt buộc), khớp DEFAULT của cột."""
   isOptional: Int
-  """null = để server layout. Ngoài viewBox 0 0 1000 2000 bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được)."""
+  """null = để server layout. Ngoài biên canvas bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được)."""
   mapX: Float
   mapY: Float
 }
@@ -4838,8 +4838,7 @@ type PathProgressPayload { ok: Boolean!, progress: Progress, error: UserError }
 #
 # Độ phủ: TOÀN BỘ use case JSON của 6 context có bảng. ` + "`" + `audio` + "`" + ` không có ở đây
 # (streaming binary + multipart upload không thuộc GraphQL — STACK-V2 §3), nó ở
-# ` + "`" + `internal/transport/http` + "`" + `: ` + "`" + `/api/tts` + "`" + `, ` + "`" + `/api/stt` + "`" + `, ` + "`" + `/api/backup` + "`" + `,
-# ` + "`" + `/api/restore` + "`" + `, static SPA.
+# ` + "`" + `internal/transport/http` + "`" + `: ` + "`" + `/api/tts` + "`" + `, ` + "`" + `/api/stt` + "`" + `, static SPA.
 
 type Query {
   # ── srs ─────────────────────────────────────────────────────────────────

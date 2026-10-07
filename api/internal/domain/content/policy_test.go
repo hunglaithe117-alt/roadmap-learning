@@ -25,7 +25,9 @@ func Test_mark_syllable_placement_rules(t *testing.T) {
 		{"n2", "n"},     //
 		{"", ""},
 	} {
-		assert.Equal(t, c.want, MarkSyllable(c.in), "input %q", c.in)
+		t.Run(c.in, func(t *testing.T) {
+			assert.Equal(t, c.want, MarkSyllable(c.in), "input %q", c.in)
+		})
 	}
 }
 
@@ -55,10 +57,14 @@ func Test_tones_from_pinyin(t *testing.T) {
 
 func Test_valid_tone_pattern(t *testing.T) {
 	for _, in := range []string{"3", "3 3", "1-4", "1,2,3", "5"} {
-		assert.True(t, ValidTonePattern(in), "input %q", in)
+		t.Run(in, func(t *testing.T) {
+			assert.True(t, ValidTonePattern(in), "input %q", in)
+		})
 	}
 	for _, in := range []string{"", "0", "6", "3 3 3 3 3 3 3 3 3", "a", "33"} {
-		assert.False(t, ValidTonePattern(in), "input %q", in)
+		t.Run(in, func(t *testing.T) {
+			assert.False(t, ValidTonePattern(in), "input %q", in)
+		})
 	}
 }
 
@@ -88,12 +94,12 @@ func Test_grade_tone_pair_grading_ladder(t *testing.T) {
 		wantGrade        int
 		wantScore        float64
 	}{
-		{"exact pair", "3 3", "3 3", toneGradeEasy, 1.0},
-		{"half right", "1 4", "1 2", toneGradeGood, 0.5},
-		{"one of three", "1 2 3", "1 5 4", toneGradeHard, 1.0 / 3.0},
-		{"all wrong", "1 4", "2 1", toneGradeAgain, 0.0},
-		{"single exact", "3", "ni3", toneGradeEasy, 1.0},
-		{"single wrong", "3", "4", toneGradeAgain, 0.0},
+		{name: "exact pair", expected: "3 3", answer: "3 3", wantGrade: toneGradeEasy, wantScore: 1.0},
+		{name: "half right", expected: "1 4", answer: "1 2", wantGrade: toneGradeGood, wantScore: 0.5},
+		{name: "one of three", expected: "1 2 3", answer: "1 5 4", wantGrade: toneGradeHard, wantScore: 1.0 / 3.0},
+		{name: "all wrong", expected: "1 4", answer: "2 1", wantGrade: toneGradeAgain, wantScore: 0.0},
+		{name: "single exact", expected: "3", answer: "ni3", wantGrade: toneGradeEasy, wantScore: 1.0},
+		{name: "single wrong", expected: "3", answer: "4", wantGrade: toneGradeAgain, wantScore: 0.0},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := GradeTonePair(c.expected, c.answer)
@@ -129,13 +135,15 @@ func Test_content_words_drops_function_words(t *testing.T) {
 // thật của bộ đếm đó — từ nào muốn trọng âm chuẩn thì phải tra en_dict.
 func Test_stress_from_dict_marks_stressed_syllable(t *testing.T) {
 	for _, c := range []struct{ term, ipa, want string }{
-		{"hi", "/ˈhaɪ/", "HI"},
-		{"bird", "/bɜːd/", "bird"},
-		{"photography", "/fəˈtɒɡrəfi/", "pho-to-GRA-phy"},
-		{"diligent", "/ˈdɪlɪdʒənt/", "di-LI-ge-nt"},
-		{"abandon", "/əˈbændən/", "a-BA-ndo-n"},
+		{term: "hi", ipa: "/ˈhaɪ/", want: "HI"},
+		{term: "bird", ipa: "/bɜːd/", want: "bird"},
+		{term: "photography", ipa: "/fəˈtɒɡrəfi/", want: "pho-to-GRA-phy"},
+		{term: "diligent", ipa: "/ˈdɪlɪdʒənt/", want: "di-LI-ge-nt"},
+		{term: "abandon", ipa: "/əˈbændən/", want: "a-BA-ndo-n"},
 	} {
-		assert.Equal(t, c.want, StressFromIPA(c.term, c.ipa), "term %s", c.term)
+		t.Run(c.term, func(t *testing.T) {
+			assert.Equal(t, c.want, StressFromIPA(c.term, c.ipa), "term %s", c.term)
+		})
 	}
 }
 

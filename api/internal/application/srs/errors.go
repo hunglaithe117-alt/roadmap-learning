@@ -6,18 +6,19 @@ import (
 	"strings"
 )
 
-// Error là lỗi nghiệp vụ mang HTTP status sẵn. Transport (M4) chỉ cần
-// `errors.As(err, &appErr)` rồi `appErr.Status` — không phải dịch lại chuỗi
-// message (làm vỡ khi ai đó đổi wording).
+// Error represents an application error with an HTTP status code.
 type Error struct {
 	Status  int
 	Message string
 }
 
+// Error implements the error interface.
 func (e *Error) Error() string { return e.Message }
 
-// Status OK của HTTP, khai báo tại chỗ để application không import net/http
-// (tầng này không được phụ thuộc framework).
+// StatusCode returns the HTTP status code.
+func (e *Error) StatusCode() int { return e.Status }
+
+// HTTP status code constants.
 const (
 	StatusOK                  = 200
 	StatusCreated             = 201
@@ -27,27 +28,21 @@ const (
 	StatusInternalServerError = 500
 )
 
-// ErrNotFound là sentinel cho "không tìm thấy" — repository trả về khi row
-// không còn (đã xoá mềm). Use case bọc lại thành *Error 404 với message
-// tiếng Việt của đúng loại nút.
+// ErrNotFound indicates that the requested entity was not found.
 var ErrNotFound = errors.New("không tìm thấy")
 
 func newError(status int, format string, args ...any) *Error {
 	return &Error{Status: status, Message: fmt.Sprintf(format, args...)}
 }
 
-// wrapNotFound dịch sentinel ErrNotFound thành *Error 404; lỗi kỹ thuật khác
-// đi nguyên vẹn (transport sẽ 500).
+// wrapNotFound wraps ErrNotFound into an application 404 Error.
 func wrapNotFound(err error, msg string) error {
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		return newError(StatusNotFound, "%s", msg)
 	}
 	return err
 }
 
-// isUniqueViolation nhận diện lỗi UNIQUE. Postgres dùng SQLSTATE 23505 —
-// kiểm tra mã thay vì so khớp message (message đổi theo phiên bản). "UNIQUE
-// constraint" giữ lại vì lỗi đã bọc qua driver có thể mất SQLSTATE.
 func isUniqueViolation(err error) bool {
 	return err != nil &&
 		(strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "UNIQUE constraint"))

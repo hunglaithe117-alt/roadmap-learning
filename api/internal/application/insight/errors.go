@@ -5,16 +5,19 @@ import (
 	"fmt"
 )
 
-// Error là lỗi nghiệp vụ mang HTTP status sẵn. Transport (M4) chỉ cần
-// `errors.As(err, &appErr)` rồi `appErr.Status`.
+// Error represents an application error with an HTTP status code.
 type Error struct {
 	Status  int
 	Message string
 }
 
+// Error implements the error interface.
 func (e *Error) Error() string { return e.Message }
 
-// Status OK của HTTP, khai báo tại chỗ để application không import net/http.
+// StatusCode returns the HTTP status code.
+func (e *Error) StatusCode() int { return e.Status }
+
+// HTTP status code constants.
 const (
 	StatusOK                  = 200
 	StatusBadRequest          = 400
@@ -22,7 +25,7 @@ const (
 	StatusInternalServerError = 500
 )
 
-// ErrNotFound là sentinel cho "không tìm thấy".
+// ErrNotFound indicates the requested resource was not found.
 var ErrNotFound = errors.New("không tìm thấy")
 
 func newError(status int, format string, args ...any) *Error {

@@ -2,23 +2,23 @@ package srs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	domain "langapp/internal/domain/srs"
+	"langapp/internal/typednil"
 )
 
-// Service là use case của context srs. 1 struct cho cả deck/card/review vì
-// các use case dùng chung repository + uow + clock; tách 3 struct chỉ tăng file
-// mà không tách được trách nhiệm nào.
+// Service orchestrates spaced repetition use cases.
 type Service struct {
 	repo  Repository
 	uow   UnitOfWork
 	nowFn NowFunc
 }
 
-// NewService dựng service. nowFn nil → UTC thật.
+// NewService constructs an SRS service.
 func NewService(repo Repository, uow UnitOfWork, nowFn NowFunc) *Service {
 	if nowFn == nil {
 		nowFn = Clock
@@ -28,11 +28,7 @@ func NewService(repo Repository, uow UnitOfWork, nowFn NowFunc) *Service {
 
 func (s *Service) timestamp() string { return s.nowFn().UTC().Format(time.RFC3339) }
 
-// ── Deck ────────────────────────────────────────────────────────────────────
-
-// CreateDeck tạo bộ thẻ. `lang` rỗng mặc định "zh" (giữ hành vi v1);
-// `NormalizeLang` map các biến thể hợp lệ của cùng 1 ngôn ngữ ("zh-CN",
-// "EN_US") về zh/en thay vì 400 — còn giá trị không nhận ra thì 400.
+// CreateDeck creates a new flashcard deck. Defaults lang to "zh" if empty.
 func (s *Service) CreateDeck(ctx context.Context, name, lang string) (Deck, error) {
 	n := strings.TrimSpace(name)
 	if n == "" {
@@ -57,7 +53,7 @@ func (s *Service) CreateDeck(ctx context.Context, name, lang string) (Deck, erro
 	return created, err
 }
 
-// ListDecks trả mọi deck (deleted = 0).
+// ListDecks returns all active decks.
 func (s *Service) ListDecks(ctx context.Context) ([]Deck, error) {
 	out, err := s.repo.ListDecks(ctx)
 	if err != nil {
@@ -66,7 +62,7 @@ func (s *Service) ListDecks(ctx context.Context) ([]Deck, error) {
 	return out, nil
 }
 
-// DeleteDeck xoá mềm deck và toàn bộ thẻ của nó (tombstone để sync lan truyền).
+// DeleteDeck soft-deletes a deck and its cards.
 func (s *Service) DeleteDeck(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return newError(StatusBadRequest, "id deck không hợp lệ")
@@ -82,17 +78,14 @@ func (s *Service) DeleteDeck(ctx context.Context, id int64) error {
 	})
 }
 
-// ── Card ────────────────────────────────────────────────────────────────────
-
-// CardInput là input CreateCard.
+// CardInput holds parameters for creating a flashcard.
 type CardInput struct {
 	Front  string
 	Back   string
 	Pinyin string
 }
 
-// CreateCard thêm thẻ vào deck. `due_at` khởi tạo = now + 24h — nhưng thẻ vẫn
-// vào hàng đợi ôn ngay vì DueFilter luôn kéo `state = 'new'` (xem domain).
+// CreateCard creates a new card inside a deck.
 func (s *Service) CreateCard(ctx context.Context, deckID int64, in CardInput) (Card, error) {
 	if deckID <= 0 {
 		return Card{}, newError(StatusBadRequest, "id deck không hợp lệ")
@@ -112,8 +105,6 @@ func (s *Service) CreateCard(ctx context.Context, deckID int64, in CardInput) (C
 		created = Card{
 			DeckID: deckID, Front: front, Back: back, Pinyin: in.Pinyin,
 			DueAt: now.Add(24 * time.Hour).Format(time.RFC3339),
-			// state = 'new' là điều kiện để DueFilter kéo thẻ chưa từng ôn vào
-			// hàng đợi dù due_at còn ở tương lai.
 			State:     domain.StateNew,
 			CreatedAt: ts, GUID: NewGUID(), UpdatedAt: ts,
 		}
@@ -128,7 +119,7 @@ func (s *Service) CreateCard(ctx context.Context, deckID int64, in CardInput) (C
 	return created, err
 }
 
-// ListCards trả thẻ của deck theo id tăng dần.
+// ListCards returns all active cards in a deck.
 func (s *Service) ListCards(ctx context.Context, deckID int64) ([]Card, error) {
 	if deckID <= 0 {
 		return nil, newError(StatusBadRequest, "id deck không hợp lệ")
@@ -143,15 +134,14 @@ func (s *Service) ListCards(ctx context.Context, deckID int64) ([]Card, error) {
 	return out, nil
 }
 
-// CardPatch là input UpdateCard.
+// CardPatch holds editable fields for a card.
 type CardPatch struct {
 	Front  *string
 	Back   *string
 	Pinyin *string
 }
 
-// UpdateCard sửa mặt trước/sau/pinyin. Không cho sửa `due_at` / `reps` — đó là
-// output của engine ôn, sửa tay sẽ phá lịch.
+// UpdateCard updates front, back, or pinyin of an existing card.
 func (s *Service) UpdateCard(ctx context.Context, id int64, patch CardPatch) (Card, error) {
 	if id <= 0 {
 		return Card{}, newError(StatusBadRequest, "id thẻ không hợp lệ")
@@ -189,7 +179,7 @@ func (s *Service) UpdateCard(ctx context.Context, id int64, patch CardPatch) (Ca
 	return updated, err
 }
 
-// DeleteCard xoá mềm thẻ (tombstone để sync).
+// DeleteCard soft-deletes a card.
 func (s *Service) DeleteCard(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return newError(StatusBadRequest, "id thẻ không hợp lệ")
@@ -205,9 +195,7 @@ func (s *Service) DeleteCard(ctx context.Context, id int64) error {
 	})
 }
 
-// DueCards trả thẻ đến hạn của deck: quá hạn (due_at <= now) HOẶC chưa từng
-// ôn (`state = 'new'`). Không có cờ include_new — thẻ mới có due_at +24h nên
-// lọc chỉ theo due_at sẽ giấu chúng khỏi hàng đợi.
+// DueCards returns cards that are due for review or in new state.
 func (s *Service) DueCards(ctx context.Context, deckID int64) ([]Card, error) {
 	if deckID <= 0 {
 		return nil, newError(StatusBadRequest, "id deck không hợp lệ")
@@ -220,8 +208,6 @@ func (s *Service) DueCards(ctx context.Context, deckID int64) ([]Card, error) {
 	for _, c := range all {
 		cards = append(cards, cardToDomain(c))
 	}
-	// Apply lọc + sắp (due_at, id) — quy tắc hàng đợi nằm ở domain, không
-	// viết lại ở đây (v1 đã viết tay 1 lần và lệch khi thêm state 'new').
 	due := domain.NewDueFilter(s.nowFn(), deckID).Apply(cards)
 	out := make([]Card, 0, len(due))
 	for _, c := range due {
@@ -232,8 +218,7 @@ func (s *Service) DueCards(ctx context.Context, deckID int64) ([]Card, error) {
 
 // ── Review ──────────────────────────────────────────────────────────────────
 
-// ReviewResult là kết quả chấm điểm 1 thẻ — trả về cho client để hiển thị
-// "lần sau ôn sau 3 ngày" mà không phải tự tính lại.
+// ReviewResult holds the outcome and next review schedule for a card.
 type ReviewResult struct {
 	CardID       int64   `json:"card_id"`
 	DueAt        string  `json:"due_at"`
@@ -244,16 +229,13 @@ type ReviewResult struct {
 	Fallback     bool    `json:"fallback"`
 }
 
-// ReviewInput là input RecordReview.
+// ReviewInput holds parameters for submitting a review grade.
 type ReviewInput struct {
 	CardID int64
 	Grade  int
 }
 
-// RecordReview chấm điểm 1 thẻ: tính lịch bằng domain/srs.ScheduleNext rồi ghi
-// UPDATE card + INSERT reviews trong CÙNG 1 transaction. Crash giữa chừng để
-// lại thẻ đã lên lịch mà không có lịch sử — sync merge sẽ tính sai toàn bộ
-// reps sau đó.
+// RecordReview records a review and recalculates SRS interval parameters in a single transaction.
 func (s *Service) RecordReview(ctx context.Context, in ReviewInput) (ReviewResult, error) {
 	if in.CardID <= 0 {
 		return ReviewResult{}, newError(StatusBadRequest, "thiếu card_id")
@@ -283,8 +265,6 @@ func (s *Service) RecordReview(ctx context.Context, in ReviewInput) (ReviewResul
 		if err := s.repo.UpdateCard(ctx, tx, &c); err != nil {
 			return fmt.Errorf("lưu lịch ôn của thẻ: %w", err)
 		}
-		// guid BẮT BUỘC khác rỗng: `ux_reviews_guid` UNIQUE trên
-		// `NOT NULL DEFAULT ''` — 2 review cùng guid rỗng là đụng nhau.
 		if err := s.repo.CreateReview(ctx, tx, &Review{
 			CardID:     c.ID,
 			Grade:      in.Grade,
@@ -304,13 +284,7 @@ func (s *Service) RecordReview(ctx context.Context, in ReviewInput) (ReviewResul
 	return out, err
 }
 
-// ── Tone ────────────────────────────────────────────────────────────────────
-
-// SetCardTone ghi số thanh đã chấm vào thẻ (nội dung "ni3" → "ní" do content
-// context tính, xem internal/domain/content GradeTonePair).
-//
-// Không có bước tự chấm ở đây: chấm thanh là business rule của context
-// `content` (bảng thang điệu), srs chỉ giữ kết quả. Tone nil = xoá.
+// SetCardTone updates the tone field on a card.
 func (s *Service) SetCardTone(ctx context.Context, id int64, tone *string) (Card, error) {
 	if id <= 0 {
 		return Card{}, newError(StatusBadRequest, "id thẻ không hợp lệ")
@@ -339,27 +313,14 @@ func (s *Service) SetCardTone(ctx context.Context, id int64, tone *string) (Card
 	return updated, err
 }
 
-// ── DeckReader cho context roadmap ──────────────────────────────────────────
-
-// DeckInfo là thông tin deck mà context roadmap cần (port ở
-// application/roadmap/ports.go — 2 bounded context khai báo port độc lập để
-// không import chéo, chỉ gặp nhau ở wiring của infrastructure).
+// DeckInfo represents deck metadata for roadmap integration.
 type DeckInfo struct {
 	Exists bool
 	Name   string
 	Lang   string
 }
 
-// FindDeck là hiện thực `roadmap.DeckReader`. Nằm ở package srs vì đây là
-// thông tin của bounded context srs — roadmap đọc qua interface, không đọc
-// bảng `decks` trực tiếp.
-//
-// Trả cả `Name` vì M6 hiện nút "vào /review" cần tên deck thật ("Ôn HSK1"),
-// không phải id.
-// FindDecks là batch của FindDeck: 1 lệnh `id IN (...)` cho NHIỀU deck.
-//
-// Dataloader `Stage.deck` của cây roadmap (M4) cần đúng hình dạng này: gọi
-// `FindDeck` mỗi stage là N statement, và số statement đó tăng theo số stage.
+// FindDecks batches deck lookups by IDs.
 func (s *Service) FindDecks(ctx context.Context, ids []int64) (map[int64]DeckInfo, error) {
 	out := make(map[int64]DeckInfo, len(ids))
 	if len(ids) == 0 {
@@ -375,21 +336,20 @@ func (s *Service) FindDecks(ctx context.Context, ids []int64) (map[int64]DeckInf
 	return out, nil
 }
 
+// FindDeck looks up a single deck by ID.
 func (s *Service) FindDeck(ctx context.Context, id int64) (DeckInfo, error) {
 	if id <= 0 {
 		return DeckInfo{}, nil
 	}
 	d, err := s.repo.DeckByID(ctx, id)
 	if err != nil {
-		if err == ErrNotFound {
-			return DeckInfo{}, nil // không có là kết quả hợp lệ, không phải lỗi
+		if errors.Is(err, ErrNotFound) {
+			return DeckInfo{}, nil
 		}
 		return DeckInfo{}, fmt.Errorf("đọc deck %d: %w", id, err)
 	}
 	return DeckInfo{Exists: true, Name: d.Name, Lang: d.Lang}, nil
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 func cardToDomain(c Card) domain.Card {
 	return domain.Card{
@@ -413,8 +373,6 @@ func cardFromDomain(c domain.Card) Card {
 	}
 }
 
-// parseTS đọc cột TEXT RFC3339 thành time.Time. Dữ liệu hỏng trả zero time
-// (UTC) thay vì panic — 1 row hỏng không được làm sập cả hàng đợi ôn.
 func parseTS(s string) time.Time {
 	if s == "" {
 		return time.Time{}
@@ -426,9 +384,6 @@ func parseTS(s string) time.Time {
 	return t.UTC()
 }
 
-// formatTS là chiều ngược của parseTS. Zero time ghi thành "" (cột NOT NULL
-// nhưng row mới chưa có mốc) — không ghi chuỗi "0001-01-01..." vì sẽ lọt vào
-// mọi bộ lọc theo mốc thời gian.
 func formatTS(t time.Time) string {
 	if t.IsZero() {
 		return ""
@@ -436,9 +391,8 @@ func formatTS(t time.Time) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
-// inTx chạy fn trong UnitOfWork; uow nil (test chỉ cần validate) → chạy thẳng.
 func (s *Service) inTx(ctx context.Context, fn func(tx Tx) error) error {
-	if s.uow == nil {
+	if typednil.Is(s.uow) {
 		return fn(nil)
 	}
 	return s.uow.Do(ctx, fn)

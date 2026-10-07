@@ -5,22 +5,18 @@ import (
 	"time"
 )
 
-// DueFilter lọc thẻ đến hạn cho hàng đợi ôn. V1 dùng SQL
-// `WHERE deck_id = ? AND deleted = 0 AND (due_at <= ? OR state = 'new')`
-// — điều kiện OR (không có cờ include_new) vì CreateCard gán due_at = +24h nên
-// thẻ mới sẽ vô hình với hàng đợi nếu lọc chỉ theo due_at.
+// DueFilter filters and orders due cards for review.
 type DueFilter struct {
 	Now    time.Time
-	DeckID int64 // 0 = không lọc theo deck
+	DeckID int64 // 0 matches all decks
 }
 
-// NewDueFilter đóng băng mốc thời gian 1 lần cho cả 1 request, tránh mỗi
-// thẻ so sánh với "bây giờ" khác nhau.
+// NewDueFilter creates a DueFilter freezing the current evaluation time.
 func NewDueFilter(now time.Time, deckID int64) DueFilter {
 	return DueFilter{Now: now.UTC(), DeckID: deckID}
 }
 
-// Keep áp điều kiện hẹn giờ lên 1 thẻ.
+// Keep reports whether a card matches the due review criteria.
 func (f DueFilter) Keep(c Card) bool {
 	if c.IsDeleted() {
 		return false
@@ -31,9 +27,7 @@ func (f DueFilter) Keep(c Card) bool {
 	return c.IsDueNow(f.Now)
 }
 
-// Apply trả về thẻ đến hạn, sắp theo (due_at, id) — thứ tự của `ORDER BY
-// due_at, id` ở v1: thẻ quá hạn lâu nhất lên trước, thẻ mới có cùng due_at thì
-// theo thứ tự tạo. Không mutate input.
+// Apply filters and returns due cards sorted by DueAt then ID.
 func (f DueFilter) Apply(cards []Card) []Card {
 	out := make([]Card, 0, len(cards))
 	for _, c := range cards {
@@ -49,3 +43,4 @@ func (f DueFilter) Apply(cards []Card) []Card {
 	})
 	return out
 }
+

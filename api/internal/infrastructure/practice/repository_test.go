@@ -47,7 +47,7 @@ func Test_shadow_progress_roundtrip_through_notes(t *testing.T) {
 	_, err := svc.RecordShadowProgress(ctx, cardID, 3, 0.75)
 	require.NoError(t, err)
 
-	got, err := svc.GetShadowProgress(ctx, cardID)
+	got, err := svc.LoadShadowProgress(ctx, cardID)
 	require.NoError(t, err)
 	assert.Equal(t, 3, got.Loops)
 	assert.InDelta(t, 0.75, got.Rate, 1e-9)
@@ -93,7 +93,7 @@ func Test_diff_normalises_traditional_chinese_from_stt_output(t *testing.T) {
 
 	// Whisper trả "學習中文" (phồn) trong khi deck mẫu dùng "学习中文" (giản).
 	// Không chuẩn hóa thì 4 từ đều bị chấm sai dù đọc đúng.
-	got, err := svc.DiffAgainstSample("学习中文", "學習中文")
+	got, err := svc.DiffAgainstSample(context.Background(), "学习中文", "學習中文")
 	require.NoError(t, err)
 	assert.Equal(t, "学习中文", got.Transcript)
 	assert.Equal(t, 1.0, got.Score)
@@ -104,7 +104,7 @@ func Test_diff_reports_wrong_words_for_shadowing_mistake(t *testing.T) {
 	db := newTestDB(t)
 	svc := newService(t, db)
 
-	got, err := svc.DiffAgainstSample("I want to make progress", "I want make progress")
+	got, err := svc.DiffAgainstSample(context.Background(), "I want to make progress", "I want make progress")
 	require.NoError(t, err)
 	assert.Less(t, got.Score, 1.0)
 	assert.Equal(t, []string{"to"}, got.Wrong)
@@ -270,7 +270,7 @@ func Test_transcribe_then_diff_flow_keeps_zh_together(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "學習中文", tr.Text, "bước STT trả nguyên bản engine")
 
-	got, err := svc.DiffAgainstSample("学习中文", tr.Text)
+	got, err := svc.DiffAgainstSample(ctx, "学习中文", tr.Text)
 	require.NoError(t, err)
 	assert.Equal(t, 1.0, got.Score)
 }

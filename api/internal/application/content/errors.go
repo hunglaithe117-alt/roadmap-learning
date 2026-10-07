@@ -4,20 +4,23 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	domain "langapp/internal/domain/content"
 )
 
-// Error là lỗi nghiệp vụ mang HTTP status sẵn. Transport (M4) chỉ cần
-// `errors.As(err, &appErr)` rồi `appErr.Status` — không phải dịch lại chuỗi
-// message (làm vỡ khi ai đó đổi wording).
+// Error represents an application-level business error with an HTTP status code.
 type Error struct {
 	Status  int
 	Message string
 }
 
+// Error implements the error interface.
 func (e *Error) Error() string { return e.Message }
 
-// Status OK của HTTP, khai báo tại chỗ để application không import net/http
-// (tầng này không được phụ thuộc framework).
+// StatusCode returns the HTTP status code.
+func (e *Error) StatusCode() int { return e.Status }
+
+// HTTP status code constants.
 const (
 	StatusOK                  = 200
 	StatusCreated             = 201
@@ -27,21 +30,17 @@ const (
 	StatusInternalServerError = 500
 )
 
-// ErrNotFound là sentinel cho "không tìm thấy" — repository trả về khi row
-// không còn (đã xoá mềm) hoặc chưa tồn tại. Use case bọc lại thành *Error 404
-// với message tiếng Việt.
+// ErrNotFound indicates that the requested entity was not found.
 var ErrNotFound = errors.New("không tìm thấy")
 
-// ErrLangMismatch là sentinel cho "tồn tại nhưng sai ngôn ngữ" — tách khỏi
-// ErrNotFound vì đây là 400 (input sai) chứ không phải 404.
+// ErrLangMismatch indicates a language mismatch on an existing entity.
 var ErrLangMismatch = errors.New("ngôn ngữ không khớp")
 
 func newError(status int, format string, args ...any) *Error {
 	return &Error{Status: status, Message: fmt.Sprintf(format, args...)}
 }
 
-// wrapNotFound dịch sentinel ErrNotFound thành *Error 404; lỗi kỹ thuật khác
-// đi nguyên vẹn (transport sẽ 500).
+// wrapNotFound wraps ErrNotFound into an application 404 Error.
 func wrapNotFound(err error, msg string) error {
 	if errors.Is(err, ErrNotFound) {
 		return newError(StatusNotFound, "%s", msg)
@@ -49,12 +48,12 @@ func wrapNotFound(err error, msg string) error {
 	return err
 }
 
-// wrapTone dịch lỗi thuần của bộ thanh (domain/content.ErrTone) thành 400 với
+// wrapTone dịch lỗi thuần của bộ thanh (domain/content.ToneError) thành 400 với
 // giữ nguyên wording tiếng Việt mà app v1 trả về.
 func wrapTone(err error) error {
-	var tone interface{ Error() string }
-	if errors.As(err, &tone) {
-		return newError(StatusBadRequest, "%s", tone.Error())
+	var te domain.ToneError
+	if errors.As(err, &te) {
+		return newError(StatusBadRequest, "%s", te.Error())
 	}
 	return err
 }

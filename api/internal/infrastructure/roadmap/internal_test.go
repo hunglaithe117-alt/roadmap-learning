@@ -1,7 +1,7 @@
 package roadmapinfra
 
 // Test nội bộ của package (không phải `roadmapinfra_test`) vì cần nắm được
-// `txHandle` để đọc lại TRONG transaction — mà đọc ngoài transaction thì thấy
+// `txOf` để đọc lại TRONG transaction — mà đọc ngoài transaction thì thấy
 // dữ liệu CŨ, tức là chính cái bug mà test này chặn.
 
 import (
@@ -92,8 +92,9 @@ func Test_readback_inside_transaction_sees_new_values(t *testing.T) {
 	}))
 
 	if !sawNewValue {
-		t.Errorf("đọc lại TRONG transaction phải thấy giá trị mới, got title=%q terrain=%q — "+
-			"nghĩa là UpdateStage đã ghi ra ngoài transaction", inTxTitle, inTxTerrain)
+		t.Errorf("đọc lại TRONG transaction: got title=%q terrain=%q, want title=%q terrain=%q — "+
+			"nghĩa là UpdateStage đã ghi ra ngoài transaction",
+			inTxTitle, inTxTerrain, "Tiêu đề MỚI", "volcano")
 	}
 	_ = pathID
 
@@ -105,7 +106,7 @@ func Test_readback_inside_transaction_sees_new_values(t *testing.T) {
 		t.Fatalf("đọc sau commit: %v", err)
 	}
 	if committed != "Tiêu đề MỚI" {
-		t.Errorf("sau commit phải thấy giá trị mới, got %q", committed)
+		t.Errorf("sau commit: got %q, want %q", committed, "Tiêu đề MỚI")
 	}
 }
 
@@ -123,9 +124,8 @@ func Test_tx_of_rejects_foreign_handle(t *testing.T) {
 	if _, err := txOf(db, struct{ ID int }{1}); err == nil {
 		t.Error("tx handle sai kiểu phải trả lỗi, không được rơi về pool")
 	}
-	if _, err := txOf(db, txHandle{}); err == nil {
-		t.Error("txHandle rỗng (tx = nil bên trong) phải trả lỗi")
-	}
+	// Nhánh "handle đúng kiểu nhưng tx bên trong nil" không dựng được từ đây
+	// sau khi gom về `txtx`: test nội bộ của package `txtx` chốt nhánh đó.
 
 	// Handle hợp lệ thì qua, và trả về đúng *gorm.DB của transaction.
 	if err := NewUnitOfWork(db).Do(context.Background(), func(tx app.Tx) error {

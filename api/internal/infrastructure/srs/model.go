@@ -1,21 +1,11 @@
-// Package srsinfra là hiện thực GORM của bounded context srs. Đây là nơi DUY
-// NHẤT trong app được phép import gorm.io (STACK-V2-PLAN §2).
+// Package srsinfra provides GORM models and repository implementations for SRS.
 package srsinfra
 
 import (
 	app "langapp/internal/application/srs"
 )
 
-// Deck là row `decks`.
-//
-// KHÔNG dùng gorm.DeletedAt: cột `deleted INTEGER 0|1` là tombstone mà toàn bộ
-// logic sync LWW đã xong phụ thuộc vào (STACK-V2-PLAN §4.4). GORM sẽ tự thêm
-// `WHERE deleted_at IS NULL` nếu field kiểu gorm.DeletedAt — sai hoàn toàn.
-// `Deleted int` + lọc thủ công ở repository.
-//
-// `UpdatedAt string` là CỐ Ý không phải time.Time: trigger
-// `trg_decks_touch_updated` gán mốc UTC dạng TEXT, và field tên `UpdatedAt`
-// kiểu time.Time sẽ bị GORM tự ghi đè (bypass trigger → sai mốc LWW).
+// Deck represents a database row in the decks table.
 type Deck struct {
 	ID        int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Name      string `gorm:"column:name"`
@@ -26,15 +16,14 @@ type Deck struct {
 	Deleted   int    `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng: GORM đoán `srs_infra_decks` từ tên package, sai.
+// TableName returns the table name for Deck.
 func (Deck) TableName() string { return "decks" }
 
-func (d Deck) toApp() app.Deck { return app.Deck(d) }
+func (d *Deck) toApp() app.Deck { return app.Deck(*d) }
 
 func deckFromApp(d app.Deck) Deck { return Deck(d) }
 
-// Card là row `cards`. Các cột NULL (tone/ipa/stress/audio_url) là *string để
-// phân biệt NULL với chuỗi rỗng.
+// Card represents a database row in the cards table.
 type Card struct {
 	ID         int64   `gorm:"column:id;primaryKey;autoIncrement"`
 	DeckID     int64   `gorm:"column:deck_id"`
@@ -57,16 +46,14 @@ type Card struct {
 	Deleted    int     `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Deck.TableName).
+// TableName returns the table name for Card.
 func (Card) TableName() string { return "cards" }
 
-func (c Card) toApp() app.Card { return app.Card(c) }
+func (c *Card) toApp() app.Card { return app.Card(*c) }
 
 func cardFromApp(c app.Card) Card { return Card(c) }
 
-// Review là row `reviews`. KHÔNG có `Deleted`: lịch sử ôn là append-only, sync
-// merge bằng union theo guid chứ không LWW — thêm tombstone vào đây sẽ làm mất
-// lịch sử trên máy peer.
+// Review represents an append-only row in the reviews table.
 type Review struct {
 	ID         int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	CardID     int64  `gorm:"column:card_id"`
@@ -76,7 +63,7 @@ type Review struct {
 	GUID       string `gorm:"column:guid"`
 }
 
-// TableName khoá tên bảng (xem Deck.TableName).
+// TableName returns the table name for Review.
 func (Review) TableName() string { return "reviews" }
 
 func reviewFromApp(r app.Review) Review { return Review(r) }

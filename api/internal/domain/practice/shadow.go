@@ -5,20 +5,17 @@ import (
 	"time"
 )
 
-// Giới hạn tốc độ phát trong player: 0.5x-1.5x.
+// Playback rate bounds for audio looping.
 const (
-	MinRate = 0.5
-	MaxRate = 1.5
-	// DefaultRate là tốc độ khi người dùng không gửi rate.
+	MinRate     = 0.5
+	MaxRate     = 1.5
 	DefaultRate = 1.0
 )
 
-// ErrRateOutOfRange là lỗi thuần khi rate nằm ngoài khoảng cho phép —
-// transport map sang 400 bằng errors.As.
-var ErrRateOutOfRange = errors.New("rate chỉ từ 0.5 đến 1.5")
+// ErrRateOutOfRange indicates the playback rate is outside [0.5, 1.5].
+var ErrRateOutOfRange = errors.New("rate must be between 0.5 and 1.5")
 
-// NormalizeRate chuẩn hóa rate: 0 (client không gửi) -> DefaultRate; ngoài
-// [MinRate, MaxRate] -> lỗi. rate âm cũng là lỗi, không phải mặc định.
+// NormalizeRate validates and defaults playback rate.
 func NormalizeRate(rate float64) (float64, error) {
 	if rate == 0 {
 		return DefaultRate, nil
@@ -29,11 +26,10 @@ func NormalizeRate(rate float64) (float64, error) {
 	return rate, nil
 }
 
-// ErrNegativeLoops là lỗi khi số vòng lặp âm — vòng lặp là bộ đếm, không
-// thể âm.
-var ErrNegativeLoops = errors.New("loops không được âm")
+// ErrNegativeLoops indicates a negative loop count.
+var ErrNegativeLoops = errors.New("loops cannot be negative")
 
-// ValidateLoops kiểm tra số vòng lặp.
+// ValidateLoops validates the loop count.
 func ValidateLoops(loops int) error {
 	if loops < 0 {
 		return ErrNegativeLoops
@@ -41,8 +37,7 @@ func ValidateLoops(loops int) error {
 	return nil
 }
 
-// AdvanceShadowSession là bước A-B loop: sau mỗi vòng nghe lại, số vòng tăng
-// 1 và rate được chuẩn hóa. Trả session mới — không mutate input.
+// AdvanceShadowSession increments the loop count and updates the timestamp.
 func AdvanceShadowSession(cur ShadowSession, rate float64, now time.Time) (ShadowSession, error) {
 	if err := ValidateLoops(cur.Loops + 1); err != nil {
 		return ShadowSession{}, err
@@ -59,8 +54,8 @@ func AdvanceShadowSession(cur ShadowSession, rate float64, now time.Time) (Shado
 	}, nil
 }
 
-// NewShadowSession là session đầu tiên cho 1 thẻ: 0 vòng, rate mặc định,
-// UpdatedAt zero (chưa có lần ghi nào).
+// NewShadowSession initializes a new shadowing session for a card.
 func NewShadowSession(cardID int64) ShadowSession {
 	return ShadowSession{CardID: cardID, Loops: 0, Rate: DefaultRate}
 }
+

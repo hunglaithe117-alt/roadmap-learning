@@ -1,9 +1,4 @@
-// Package srs chứa tầng orchestration của bounded context spaced repetition:
-// use case deck / card / review, gọi domain/srs để tính lịch ôn (ScheduleNext)
-// và gọi repository (định nghĩa ở đây) để đọc/ghi.
-//
-// Lớp này KHÔNG import driver DB và KHÔNG import tầng hạ tầng (infrastructure)
-// (STACK-V2-PLAN §2). Mọi truy cập DB đi qua interface dưới đây.
+// Package srs coordinates spaced repetition use cases: decks, cards, and review scheduling.
 package srs
 
 import (
@@ -13,33 +8,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// Tx là handle transaction do UnitOfWork tạo và đưa cho repository.
-//
-// Kiểu `any` cố ý: application không biết driver, còn infrastructure tự ép
-// kiểu về *gorm.DB. Đổi sang interface có method sẽ buộc infrastructure phải
-// implement marker method của package này — tức là hướng phụ thuộc đảo ngược.
+// Tx represents a database transaction handle.
 type Tx = any
 
-// UnitOfWork chạy 1 khối ghi trong 1 transaction; callback trả lỗi ⇒ rollback
-// toàn bộ. RecordReview dùng nó vì UPDATE card + INSERT reviews phải là 1
-// khối nguyên tử: crash giữa chừng để lại thẻ đã lên lịch mà không có lịch sử.
+// UnitOfWork runs an operation inside a database transaction.
 type UnitOfWork interface {
 	Do(ctx context.Context, fn func(tx Tx) error) error
 }
 
-// Repository là toàn bộ truy cập DB của context srs mà tầng application cần.
-// Mọi list đã lọc `deleted = 0` trong chính repository.
-//
-// MỌI METHOD GHI đều nhận `Tx` làm tham số đầu: đó là cách duy nhất để
-// repository biết phải ghi vào transaction nào. Method đọc không nhận vì đọc
-// ngoài transaction vẫn đúng (và bọc vào chỉ tốn connection — xem
-// tầng infrastructure, repository.go luật 2).
+// Repository defines data access for SRS entities.
 type Repository interface {
 	CreateDeck(ctx context.Context, tx Tx, d *Deck) error
 	ListDecks(ctx context.Context) ([]Deck, error)
 	DeckByID(ctx context.Context, id int64) (Deck, error)
-	// DecksByIDs là BATCH của DeckByID cho dataloader `Stage.deck` (M4) —
-	// xem `Service.FindDecks` để biết vì sao cần.
 	DecksByIDs(ctx context.Context, ids []int64) ([]Deck, error)
 	SoftDeleteDeck(ctx context.Context, tx Tx, id int64) error
 
@@ -52,7 +33,7 @@ type Repository interface {
 	CreateReview(ctx context.Context, tx Tx, r *Review) error
 }
 
-// Deck là row `decks` đã đọc từ DB.
+// Deck represents a study deck.
 type Deck struct {
 	ID        int64
 	Name      string
@@ -63,9 +44,7 @@ type Deck struct {
 	Deleted   int
 }
 
-// Card là row `cards`. DoAt/CreatedAt/UpdatedAt là RFC3339 string vì cột là
-// TEXT (không đổi từ SQLite v4) — repository quyết định format, domain dùng
-// time.Time.
+// Card represents a study flashcard.
 type Card struct {
 	ID         int64
 	DeckID     int64
@@ -88,8 +67,7 @@ type Card struct {
 	Deleted    int
 }
 
-// Review là row `reviews` — append-only, KHÔNG có `deleted` (lịch sử ôn không
-// xoá mềm; sync merge bằng union theo guid).
+// Review records an individual card review.
 type Review struct {
 	ID         int64
 	CardID     int64
@@ -99,17 +77,11 @@ type Review struct {
 	GUID       string
 }
 
-// NewGUID sinh guid cho row mới.
-//
-// KHÔNG BAO GIỜ sinh guid rỗng: `ux_reviews_guid` là UNIQUE trên cột
-// `TEXT NOT NULL DEFAULT ”`, nên 2 review liên tiếp cùng guid rỗng là đụng
-// nhau và insert thứ 2 fail (ghi chú M1 remediation). `guid` cũng là natural
-// key để peer union lịch sử ôn — 2 row khác cùng guid sẽ bị coi là 1.
+// NewGUID generates a new UUID v4 string.
 func NewGUID() string { return uuid.NewString() }
 
-// NowFunc là nguồn thời gian, inject để test được và để 1 request dùng chung
-// 1 mốc.
+// NowFunc provides current time, injected for deterministic testing.
 type NowFunc func() time.Time
 
-// Clock mặc định: UTC.
+// Clock returns the current UTC time.
 func Clock() time.Time { return time.Now().UTC() }

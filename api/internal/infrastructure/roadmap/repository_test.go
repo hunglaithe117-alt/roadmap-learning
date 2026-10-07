@@ -147,14 +147,22 @@ func Test_map_coord_outside_viewbox_is_rejected(t *testing.T) {
 	ctx := context.Background()
 	_, stage, _ := buildTree(t, svc)
 
-	// viewBox là 0 0 1000 2000.
+	// Biên validate là `MapViewWidth`/`MapViewHeight` — canvas lớn nhất mà layout
+	// vẽ được (n = MapMaxNodes node), KHÔNG phải 1000×2000 của hợp đồng cũ:
+	// canvas nay rộng theo số node và cao cố định.
 	_, err := svc.CreateTopic(ctx, stage.ID, roadmapapp.TopicInput{
-		Title: "ra ngoài", MapX: f64p(1500),
+		Title: "ra ngoài", MapX: f64p(domain.MapViewWidth + 1),
 	})
 	require.Error(t, err)
 	var appErr *roadmapapp.Error
 	require.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 400, appErr.Status)
+
+	// Cao hơn canvas cũng phải bị chặn — trục phụ chỉ dài MapViewHeight.
+	_, err = svc.CreateTopic(ctx, stage.ID, roadmapapp.TopicInput{
+		Title: "cao quá", MapY: f64p(domain.MapViewHeight + 1),
+	})
+	require.Error(t, err, "Y vượt quá chiều cao canvas là node ngoài khung")
 
 	_, err = svc.CreateTopic(ctx, stage.ID, roadmapapp.TopicInput{
 		Title: "âm", MapY: f64p(-1),
@@ -526,11 +534,14 @@ func Test_layout_from_repository_is_deterministic_across_reads(t *testing.T) {
 	second := layoutOnce()
 	assert.Equal(t, first, second, "2 lần đọc cùng dữ liệu phải ra cùng toạ độ")
 	require.NotEmpty(t, first)
+	// Node phải nằm trong canvas THẬT của stage (bề rộng động theo số node),
+	// không phải trong cặp biên-validate rộng hơn.
+	alongHi := domain.MapCanvasWidth(len(first))
 	for i, p := range first {
 		assert.GreaterOrEqual(t, p.X, 0.0)
-		assert.LessOrEqual(t, p.X, domain.MapViewWidth, "node %d", i)
+		assert.LessOrEqual(t, p.X, domain.MapCanvasHeight, "node %d (dir=up: trục phụ là X)", i)
 		assert.GreaterOrEqual(t, p.Y, 0.0)
-		assert.LessOrEqual(t, p.Y, domain.MapViewHeight, "node %d", i)
+		assert.LessOrEqual(t, p.Y, alongHi, "node %d (dir=up: trục chính là Y)", i)
 	}
 }
 

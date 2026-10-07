@@ -23,14 +23,20 @@ POSTGRES_PASSWORD ?= langapp
 #
 # VÌ SAO PHẢI RIÊNG (đây là bài học thật, không phải phòng xa): test dựng
 # schema tạm rồi `search_path` trỏ vào đó, nhưng `search_path` buộc phải có
-# schema giữ extension `pg_trgm` — mà extension đó thường nằm ở `public`,
-# CÙNG schema chứa bảng thật của app. Khi đó `SELECT count(*) FROM dict` sau
-# khi test đã `DROP TABLE dict` sẽ RƠI XUỐNG `public` và đọc dữ liệu thật của
-# user, thay vì báo "relation does not exist" ⇒ test xanh vì đọc nhầm bảng
-# production. Test còn có thể GHI vào bảng thật.
+# schema giữ extension `pg_trgm`. Trước đây schema đó là `public` — CÙNG schema
+# chứa bảng thật của app — nên `SELECT count(*) FROM dict` sau khi test đã
+# `DROP TABLE dict` sẽ RƠI XUỐNG `public` và đọc dữ liệu thật của user, thay
+# vì báo "relation does not exist" ⇒ test xanh vì đọc nhầm bảng production.
+# Tệ hơn: test có thể GHI vào bảng thật.
 #
-# `testdb.requireIsolatedDB` fail nếu DSN trỏ vào database có dữ liệu app, nên
-# quên đổi DSN sẽ ra lỗi to+ nét thay vì kết quả sai.
+# Nay `search_path` test dùng schema `testext` (xem `testdb.ExtSchema`) chứ
+# KHÔNG dùng `public` — nhưng database riêng vẫn là lớp cách ly CHÍNH, vì nó
+# bảo vệ dữ liệu ngay cả khi `search_path` bị cấu hình sai.
+#
+# `testdb.requireIsolatedDB` fail nếu DSN trỏ vào database có dữ liệu app (so
+# cả tên lẫn bằng chứng cấu trúc), nên quên đổi DSN sẽ ra lỗi to+ nét thay
+# vì kết quả sai. Database này do `docker/postgres-init/` tạo lúc Postgres
+# init; `db-up` dưới đây tạo lại idempotent cho volume đã có sẵn.
 TEST_DB ?= langapp_test
 
 # DSN có sẵn thì giữ nguyên (để CI/agent truyền DSN riêng được), không thì dựng
@@ -47,6 +53,27 @@ GO_TEST_TIMEOUT ?= 15m
 # ⇒ database `langapp_test` biến mất. Nếu `test` không tự dựng lại thì toàn bộ
 # suite DB fail bằng `database "langapp_test" does not exist` — và người đọc log
 # sẽ tưởng code hỏng, trong khi thực ra chỉ là thiếu 1 bước dựng hạ tầng.
+# ⚠️ CẢNH BÁO TRƯỚC, VÌ `db-up` KHÔNG ĐỦ.
+#
+# `test` chạy vào database `langapp_test`, KHÔNG phải database app — nhưng có 1
+# điều kiện ngầm mà `db-up` không lo được: app phải đã BOOT ÍT NHẤT 1 LẦN để
+# extension `pg_trgm` tồn tại trong `langapp`. `pg_trgm` là extension cấp
+# database, `00002_fts.sql` cài nó bằng `CREATE EXTENSION IF NOT EXISTS` vào
+# schema đầu tiên của `search_path` app (tức `public`).
+#
+# Nếu `langapp` CHƯA TỪNG BOOT (đúng trạng thái sau `docker compose down -v`, tức
+# bước 1 của "Reset" trong DEPLOY.md) thì `pg_trgm` chưa có ở đâu cả. Khi đó
+# lớp tự vệ trong `testdb` SẼ CHẶN (nó không ghi vào database app), nhưng bài
+# test viện cảnh báo này vẫn ĐỎ — đúng mục đích, vì "app chưa boot" là trạng
+# thái chưa sẵn sàng để test.
+#
+# Nếu bạn vừa `down -v`, hãy boot app TRƯỚC rồi hãy `make test`:
+#
+#	docker compose --profile v2 down -v
+#	docker compose --profile v2 up -d     # chờ healthy
+#	make test
+#
+# Xem `DEPLOY.md` § "Chạy test".
 .PHONY: test
 test: db-up ## Chạy test backend với DSN thật (tự trỏ database test riêng)
 	@echo "▶ go test ./...  (DSN: $${LANGAPP_TEST_POSTGRES_DSN##*@})"
@@ -78,13 +105,51 @@ fmt-check: ## Fail nếu có file Go chưa gofmt
 	if [ -n "$$out" ]; then echo "✗ chưa gofmt:"; echo "$$out"; exit 1; fi; \
 	echo "✔ gofmt sạch"
 
+# ── Codegen ────────────────────────────────────────────────────────────────
+#
+# Codegen cần 4 binary ngoài PATH: buf, protoc-gen-go, protoc-gen-go-grpc và
+# gqlgen. `check-codegen-tools` chặn TRƯỚC khi chạy codegen để thiếu binary ra
+# thông báo kèm lệnh cài, thay vì lỗi "executable file not found" khó hiểu.
+#
+# Chú ý comment trong recipe: KHÔNG đặt dòng `#` bắt đầu bằng tab BÊN TRONG
+# recipe (make nuốt dòng lệnh kế tiếp, xem ghi chú ở mục Hạ tầng). Vì vậy mọi
+# chú thích ở đây đặt NGOÀI recipe.
+
+.PHONY: check-codegen-tools
+check-codegen-tools: ## Fail nếu thiếu tool codegen (buf, protoc-gen-go, protoc-gen-go-grpc, gqlgen)
+	@missing=""; for t in buf protoc-gen-go protoc-gen-go-grpc gqlgen; do \
+		command -v $$t >/dev/null 2>&1 || missing="$$missing $$t"; done; \
+	if [ -n "$$missing" ]; then \
+		echo "✗ thiếu tool codegen:$$missing"; \
+		echo "  cài: go install github.com/bufbuild/buf/cmd/buf@latest"; \
+		echo "       go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"; \
+		echo "       go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest"; \
+		echo "       go install github.com/99designs/gqlgen@latest"; \
+		echo "  binary nằm ở \$$(go env GOPATH)/bin — thêm vào PATH nếu chưa có"; \
+		exit 1; fi
+
+.PHONY: generate
+generate: check-codegen-tools ## Chạy codegen (gqlgen + buf). Cần 4 tool trong PATH.
+	cd api/internal/transport/graphql && go generate ./...
+	cd api/proto && go generate ./...
+
 .PHONY: generate-check
-generate-check: ## Fail nếu `go generate` sinh ra khác biệt (idempotent)
-	@cd api && cp go.sum /tmp/langapp-go.sum.bak && \
-	 go generate ./... >/dev/null 2>&1; \
-	if ! diff -q go.sum /tmp/langapp-go.sum.bak >/dev/null; then \
-		echo "✗ go generate sinh khác biệt trong go.sum"; exit 1; fi; \
-	echo "✔ go generate idempotent"
+generate-check: check-codegen-tools ## So hash: fail nếu codegen sinh ra khác nguồn (hoặc go.sum đổi)
+	@cd api && find internal/transport/graphql/generated internal/transport/graphql/model proto -type f -name '*.go' \
+		-exec sha256sum {} + | sort > /tmp/langapp-gen-before.txt
+	@cd api && cp go.sum /tmp/langapp-go.sum.bak
+	@cd api/internal/transport/graphql && go generate ./...
+	@cd api/proto && go generate ./...
+	@cd api && find internal/transport/graphql/generated internal/transport/graphql/model proto -type f -name '*.go' \
+		-exec sha256sum {} + | sort > /tmp/langapp-gen-after.txt
+	@if ! diff -q /tmp/langapp-gen-before.txt /tmp/langapp-gen-after.txt >/dev/null; then \
+		echo "✗ generated code lệch — chạy 'make generate' rồi commit"; \
+		diff /tmp/langapp-gen-before.txt /tmp/langapp-gen-after.txt || true; \
+		exit 1; fi
+	@cd api && if ! diff -q go.sum /tmp/langapp-go.sum.bak >/dev/null; then \
+		echo "✗ go generate sinh khác biệt trong go.sum"; \
+		diff go.sum /tmp/langapp-go.sum.bak || true; exit 1; fi; \
+	echo "✔ generated code khớp nguồn; go.sum không đổi"
 
 # ── Hạ tầng ────────────────────────────────────────────────────────────────
 

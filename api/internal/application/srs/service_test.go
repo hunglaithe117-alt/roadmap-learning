@@ -3,6 +3,7 @@ package srs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -193,9 +194,11 @@ func Test_create_deck_normalises_lang_variants(t *testing.T) {
 	for _, c := range []struct{ in, want string }{
 		{"zh", "zh"}, {"ZH", "zh"}, {"zh-CN", "zh"}, {"en_us", "en"}, {"", "zh"},
 	} {
-		got, err := svc.CreateDeck(ctx, "Deck", c.in)
-		require.NoError(t, err, "lang %q", c.in)
-		assert.Equal(t, c.want, got.Lang, "lang %q phải quy về zh|en", c.in)
+		t.Run(fmt.Sprintf("lang=%q", c.in), func(t *testing.T) {
+			got, err := svc.CreateDeck(ctx, "Deck", c.in)
+			require.NoError(t, err, "lang %q", c.in)
+			assert.Equal(t, c.want, got.Lang, "lang %q phải quy về zh|en", c.in)
+		})
 	}
 	_, err := svc.CreateDeck(ctx, "Deck", "fr")
 	require.Error(t, err)

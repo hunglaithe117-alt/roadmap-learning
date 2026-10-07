@@ -2,6 +2,7 @@ package httptransport
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -72,9 +73,11 @@ func Test_x_engine_header_follows_engine_after_first_request(t *testing.T) {
 func Test_x_engine_header_always_reports_stub_for_stub_engine(t *testing.T) {
 	e := testRouter("")
 	for i := 0; i < 3; i++ {
-		w := httptest.NewRecorder()
-		e.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/tts?text=a", nil))
-		require.Equal(t, "stub", w.Header().Get(audiodomain.Header), "request %d", i)
+		t.Run(fmt.Sprintf("request %d", i), func(t *testing.T) {
+			w := httptest.NewRecorder()
+			e.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/tts?text=a", nil))
+			require.Equal(t, "stub", w.Header().Get(audiodomain.Header), "request %d", i)
+		})
 	}
 }
 
@@ -162,7 +165,7 @@ func Test_health_returns_503_regardless_of_audio_state_when_db_down(t *testing.T
 func Test_server_base_context_is_the_process_context(t *testing.T) {
 	base, cancel := context.WithCancel(context.Background())
 	r := NewRouter(Options{GinMode: "test", TTS: StubTTS{}, STT: StubSTT{}, Log: discardLogger()})
-	srv := r.Server(DefaultServerTimeouts(), base)
+	srv := r.Server(base, DefaultServerTimeouts())
 	require.NotNil(t, srv.BaseContext, "thiếu BaseContext thì request không bị huỷ khi dừng container")
 
 	got := srv.BaseContext(nil)

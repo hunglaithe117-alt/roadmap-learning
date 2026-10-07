@@ -9,63 +9,25 @@ import (
 	"gorm.io/gorm"
 
 	app "langapp/internal/application/content"
+	"langapp/internal/platform/txtx"
 )
 
-// LUẬT GHI — cùng bộ luật với infrastructure/srs và infrastructure/roadmap:
-//
-//  1. CẤM `db.Model(&X{}).Update(...)` với struct RỖNG. UPDATE không có khoá
-//     chính nên GORM không sinh `WHERE id = ?`; với `AllowGlobalUpdate: false`
-//     (đặt ở platform.OpenPostgres) GORM trả `ErrMissingWhereClause` chứ không
-//     chạy lệnh — nhưng nếu ai đó bật `AllowGlobalUpdate: true` thì câu UPDATE
-//     chạy trên TOÀN BỘ bảng và trigger `langapp_touch_updated_at` gõ vào mọi
-//     row, làm merge LWW phía peer chọn nhầm bản cũ là bản mới.
-//  2. KHÔNG query lồng trong vòng `rows.Next()` — conn đang giữ `rows` chưa
-//     trả về pool sẽ kẹp vĩnh viễn. Mọi list thu thập hết row vào slice
-//     trước, đóng rồi mới query tiếp.
-//  3. Mọi ghi bọc trong UnitOfWork, kể cả ghi 1 dòng.
-
-// unitOfWork hiện thực app.UnitOfWork bằng `gorm.DB.Transaction`.
+// unitOfWork implements app.UnitOfWork using GORM transactions.
 type unitOfWork struct{ db *gorm.DB }
 
-// NewUnitOfWork dựng UnitOfWork trên pool GORM đã có.
+// NewUnitOfWork constructs a UnitOfWork on the provided GORM DB.
 func NewUnitOfWork(db *gorm.DB) app.UnitOfWork { return &unitOfWork{db: db} }
 
 func (u *unitOfWork) Do(ctx context.Context, fn func(app.Tx) error) error {
-	return u.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(txHandle{tx: tx})
-	})
+	return txtx.Do(ctx, u.db, fn)
 }
 
-// txHandle là hiện thực của app.Tx — struct{} marker + con trỏ GORM đi kèm.
-type txHandle struct{ tx *gorm.DB }
-
-// errTxMismatch là lỗi trả về khi `app.Tx` không phải handle do package này tạo.
-var errTxMismatch = errors.New("tx handle sai context — không phải do repository này tạo")
-
-// txOf trả *gorm.DB đúng phạm vi:
-//   - `tx == nil` → gọi ngoài transaction, dùng pool (hợp lệ cho unit test của
-//     application khi `uow` không bind).
-//   - handle hợp lệ → *gorm.DB của transaction.
-//   - handle sai kiểu → LỖI, KHÔNG rơi về pool.
-//
-// Vì sao phải lỗi chứ không rơi về pool (finding H4 của cổng Oracle M3): im
-// lặng rơi về pool biến 1 lỗi lập trình thành **ghi ra NGOÀI transaction** —
-// rollback không ăn, và test vẫn xanh vì dữ liệu "vẫn tới nơi". Handle lấy
-// nhầm từ context khác là rất dễ xảy ra khi M3 cho 7 context cùng dùng kiểu
-// `app.Tx` trống. Xem `infrastructure/srs/repository.go` — chỗ đầu tiên
-// chuyển sang luật này.
+// txOf returns the scoped *gorm.DB from tx, falling back to root if tx is nil.
 func txOf(root *gorm.DB, tx app.Tx) (*gorm.DB, error) {
-	if tx == nil {
-		return root, nil
-	}
-	h, ok := tx.(txHandle)
-	if !ok || h.tx == nil {
-		return nil, errTxMismatch
-	}
-	return h.tx, nil
+	return txtx.Of(root, tx)
 }
 
-// txCtx là `txOf` + `WithContext(ctx)` — viết ngắn cho mọi method nhận cả hai.
+// txCtx combines txOf with context.
 func txCtx(root *gorm.DB, ctx context.Context, tx app.Tx) (*gorm.DB, error) {
 	db, err := txOf(root, tx)
 	if err != nil {
@@ -74,21 +36,15 @@ func txCtx(root *gorm.DB, ctx context.Context, tx app.Tx) (*gorm.DB, error) {
 	return db.WithContext(ctx), nil
 }
 
-// Repository hiện thực app.Repository.
+// Repository implements app.Repository.
 type Repository struct{ db *gorm.DB }
 
-// NewRepository dựng repository trên pool GORM.
+// NewRepository constructs a content Repository on a GORM DB.
 func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
 
 var _ app.Repository = (*Repository)(nil)
 
-// SearchZH tra dict qua HÀM SQL `dict_search` — không viết lại truy vấn ở đây.
-//
-// Hàm đó (migrations/00002_fts.sql) đã lo hết phần khó: `websearch_to_tsquery`
-// chịu được cú pháp người dùng gõ thẳng (không ném lỗi như `to_tsquery`),
-// `ILIKE` làm lưới vớ cho CJK 1-N ký tự (vì `to_tsvector('simple', '你好')`
-// gộp cả chuỗi Hán làm MỘT token), và `regexp_replace` khử ký tự wildcard
-// `%_\` của input để "1 ký tự" không khớp toàn bảng (finding F5 của M1).
+// SearchZH queries the Chinese dictionary using dict_search.
 func (r *Repository) SearchZH(ctx context.Context, q string, limit int) ([]app.ZHEntry, error) {
 	var rows []app.ZHEntry
 	if err := r.db.WithContext(ctx).Raw(
@@ -101,7 +57,7 @@ func (r *Repository) SearchZH(ctx context.Context, q string, limit int) ([]app.Z
 	return rows, nil
 }
 
-// SearchEN tra en_dict qua hàm SQL `en_dict_search` (xem SearchZH).
+// SearchEN queries the English dictionary using en_dict_search.
 func (r *Repository) SearchEN(ctx context.Context, q string, limit int) ([]app.ENEntry, error) {
 	var rows []app.ENEntry
 	if err := r.db.WithContext(ctx).Raw(
@@ -114,12 +70,7 @@ func (r *Repository) SearchEN(ctx context.Context, q string, limit int) ([]app.E
 	return rows, nil
 }
 
-// LookupEN tra CHÍNH XÁC 1 headword.
-//
-// `lower(term) = lower(?)` là dạng duy nhất dùng được index
-// `idx_en_dict_term_lower` (đã tạo ở migration 00002). KHÔNG dùng
-// `COLLATE NOCASE` như api/english.go:274 v1 — đó là cú pháp SQLite và **lỗi
-// cú pháp trong Postgres**. File v1 không sửa ở M3 vì app cũ vẫn chạy SQLite.
+// LookupEN performs an exact match lookup on an English headword.
 func (r *Repository) LookupEN(ctx context.Context, term string) (app.ENEntry, bool, error) {
 	var row EnDict
 	err := r.db.WithContext(ctx).
@@ -134,8 +85,7 @@ func (r *Repository) LookupEN(ctx context.Context, term string) (app.ENEntry, bo
 	return enToApp(row), true, nil
 }
 
-// DictHanziSet trả tập chữ Hán đã có trong dict. Import HSK dùng để không
-// chèn lại trong cùng 1 lần (và báo `dict_added` trung thực).
+// DictHanziSet returns the set of Chinese characters present in the dictionary.
 func (r *Repository) DictHanziSet(ctx context.Context, tx app.Tx) (map[string]bool, error) {
 	db, err := txCtx(r.db, ctx, tx)
 	if err != nil {
@@ -152,8 +102,7 @@ func (r *Repository) DictHanziSet(ctx context.Context, tx app.Tx) (map[string]bo
 	return out, nil
 }
 
-// InsertDict chèn 1 dòng dict; trả false nếu chữ đã có (import là idempotent
-// theo chữ Hán — chứ không theo level, vì tra từ điển là tra theo chữ).
+// InsertDict inserts a dictionary entry.
 func (r *Repository) InsertDict(ctx context.Context, tx app.Tx, e *app.ZHEntry) (bool, error) {
 	db, err := txCtx(r.db, ctx, tx)
 	if err != nil {
@@ -166,7 +115,7 @@ func (r *Repository) InsertDict(ctx context.Context, tx app.Tx, e *app.ZHEntry) 
 	return true, nil
 }
 
-// CountDict đếm số dòng dict.
+// CountDict returns the number of rows in the dict table.
 func (r *Repository) CountDict(ctx context.Context) (int, error) {
 	var n int64
 	if err := r.db.WithContext(ctx).Model(&Dict{}).Count(&n).Error; err != nil {
@@ -175,7 +124,7 @@ func (r *Repository) CountDict(ctx context.Context) (int, error) {
 	return int(n), nil
 }
 
-// InsertEN chèn 1 dòng en_dict (seed tích hợp).
+// InsertEN inserts an English dictionary entry.
 func (r *Repository) InsertEN(ctx context.Context, tx app.Tx, e *app.ENEntry) (bool, error) {
 	db, err := txCtx(r.db, ctx, tx)
 	if err != nil {
@@ -188,7 +137,7 @@ func (r *Repository) InsertEN(ctx context.Context, tx app.Tx, e *app.ENEntry) (b
 	return true, nil
 }
 
-// CountEN đếm số dòng en_dict.
+// CountEN returns the number of rows in the en_dict table.
 func (r *Repository) CountEN(ctx context.Context) (int, error) {
 	var n int64
 	if err := r.db.WithContext(ctx).Model(&EnDict{}).Count(&n).Error; err != nil {
@@ -197,10 +146,7 @@ func (r *Repository) CountEN(ctx context.Context) (int, error) {
 	return int(n), nil
 }
 
-// InsertNote ghi 1 note (prefix THIEU| của context content).
-//
-// `card_id` NULL là trạng thái hợp lệ: checklist THIEU không gắn thẻ. Truyền
-// `nil` trong `Note.CardID` sẽ ghi SQL NULL thật — dùng `&0` sẽ vi phạm FK.
+// InsertNote inserts a note entry.
 func (r *Repository) InsertNote(ctx context.Context, tx app.Tx, n *app.Note) error {
 	db, err := txCtx(r.db, ctx, tx)
 	if err != nil {
@@ -214,11 +160,7 @@ func (r *Repository) InsertNote(ctx context.Context, tx app.Tx, n *app.Note) err
 	return nil
 }
 
-// ListNotesByPrefix trả note có prefix, MỚI NHẤT TRƯỚC.
-//
-// `text LIKE 'THIEU|%'` — ký tự `%` phía sau là LIKE, nhưng chuỗi `THIEU|`
-// trước đó được truyền qua bind parameter nên không cần escape. Cột `text`
-// không có index riêng (xem migration 00005 cho index phục vụ truy vấn này).
+// ListNotesByPrefix returns notes starting with prefix, newest first.
 func (r *Repository) ListNotesByPrefix(ctx context.Context, prefix string, limit int) ([]app.Note, error) {
 	var rows []Note
 	if err := r.db.WithContext(ctx).Where("text LIKE ?", prefix+"%").

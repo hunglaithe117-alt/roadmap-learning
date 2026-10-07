@@ -1,25 +1,25 @@
 package content
 
-// THIEUAxis là 1 trục checklist tự đánh giá với rubric tiếng Việt.
+// THIEUAxis represents a self-assessment checklist rubric axis.
 type THIEUAxis struct {
 	Code string
 	Name string
 	Desc string
 }
 
-// THIEUAxes là 8 trục A-H, thang 1-5, do tác giả app soạn.
+// THIEUAxes defines the 8 evaluation axes (A-H, 1-5 scale).
 var THIEUAxes = []THIEUAxis{
-	{"A", "Trọng âm từ", "Từ đa âm tiết có nhấn đúng âm tiết mạnh không? (1 = đều đều, 5 = rõ trọng âm)"},
-	{"B", "Nhịp câu (chunking)", "Câu có ngắt cụm content/function, từ nội dung đọc mạnh hơn không?"},
-	{"C", "Nối âm – nuốt âm", "Có nối phụ âm–nguyên âm, giảm âm function words (to → /tə/) tự nhiên không?"},
-	{"D", "Ngữ điệu", "Câu có lên/xuống giọng đúng ý (hỏi, liệt kê, nhấn mạnh) không?"},
-	{"E", "Nguyên âm – phụ âm", "Các âm khó (/θ ð ʃ tʃ ɪ iː/) có rõ, không Việt hóa không?"},
-	{"F", "Cụm PVO", "Buổi này dùng đúng ≥3 cụm PVO đã học trong câu tự nói không?"},
-	{"G", "Trôi chảy", "Nói liền mạch, ít ậm ừ, đúng nhịp thở theo chunk không?"},
-	{"H", "Thói quen", "Đủ drill ngày (SRS queue hết) + ghi chú lỗi vào notes không?"},
+	{Code: "A", Name: "Trọng âm từ", Desc: "Từ đa âm tiết có nhấn đúng âm tiết mạnh không? (1 = đều đều, 5 = rõ trọng âm)"},
+	{Code: "B", Name: "Nhịp câu (chunking)", Desc: "Câu có ngắt cụm content/function, từ nội dung đọc mạnh hơn không?"},
+	{Code: "C", Name: "Nối âm – nuốt âm", Desc: "Có nối phụ âm–nguyên âm, giảm âm function words (to → /tə/) tự nhiên không?"},
+	{Code: "D", Name: "Ngữ điệu", Desc: "Câu có lên/xuống giọng đúng ý (hỏi, liệt kê, nhấn mạnh) không?"},
+	{Code: "E", Name: "Nguyên âm – phụ âm", Desc: "Các âm khó (/θ ð ʃ tʃ ɪ iː/) có rõ, không Việt hóa không?"},
+	{Code: "F", Name: "Cụm PVO", Desc: "Buổi này dùng đúng ≥3 cụm PVO đã học trong câu tự nói không?"},
+	{Code: "G", Name: "Trôi chảy", Desc: "Nói liền mạch, ít ậm ừ, đúng nhịp thở theo chunk không?"},
+	{Code: "H", Name: "Thói quen", Desc: "Đủ drill ngày (SRS queue hết) + ghi chú lỗi vào notes không?"},
 }
 
-// THIEUCode tra trục theo mã A-H; ok=false nếu mã lạ.
+// THIEUCode finds a rubric axis by code A-H.
 func THIEUCode(code string) (THIEUAxis, bool) {
 	for _, ax := range THIEUAxes {
 		if ax.Code == code {
@@ -29,9 +29,7 @@ func THIEUCode(code string) (THIEUAxis, bool) {
 	return THIEUAxis{}, false
 }
 
-// THIEUAvg là điểm trung bình trên các trục CÓ điểm. Trục bỏ trống không
-// tính vào mẫu số (user chấm 4/8 trục thì trung bình phải phản ánh 4 trục
-// đó, không chia 8). Không có trục nào điểm -> 0.
+// THIEUAvg computes the average score over scored axes, ignoring unrated ones.
 func THIEUAvg(scores map[string]int) float64 {
 	sum, n := 0, 0
 	for _, ax := range THIEUAxes {

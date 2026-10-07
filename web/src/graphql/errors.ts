@@ -16,8 +16,8 @@ export class AppError extends Error {
   /** Mã lỗi của server (`BAD_REQUEST`/`NOT_FOUND`/`CONFLICT`/`NOT_IMPLEMENTED`/
    * `INTERNAL`). `NOT_IMPLEMENTED` = tính năng chưa bật (`mutation.sync` khi
    * chưa có nguồn snapshot peer) — hiện "đang xây", KHÔNG phải "server hỏng",
-   * nên đừng cho user bấm "thử lại". Cùng mã với REST `/api/backup` 501
-   * (`rest/client.ts`). */
+   * nên đừng cho user bấm "thử lại". `rest/client.ts` map cùng mã này cho
+   * HTTP 501. */
   readonly code: string;
 
   constructor(message: string, code = 'INTERNAL', options?: { cause?: unknown }) {

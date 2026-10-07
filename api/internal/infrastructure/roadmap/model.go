@@ -1,20 +1,11 @@
-// Package roadmapinfra là hiện thực GORM của bounded context roadmap. Nơi
-// DUY NHẤT trong context này được phép import gorm.io (STACK-V2-PLAN §2).
+// Package roadmapinfra provides GORM models and repository implementations for the roadmap bounded context.
 package roadmapinfra
 
 import (
 	app "langapp/internal/application/roadmap"
 )
 
-// Path là row `roadmap_paths`.
-//
-// `UpdatedAt string` CỐ Ý không phải time.Time: trigger
-// `trg_roadmap_paths_touch_updated` gán mốc UTC dạng TEXT, còn field tên
-// `UpdatedAt` kiểu time.Time sẽ bị GORM tự ghi đè mỗi lần UPDATE (bypass
-// trigger → sai mốc LWW phía peer).
-//
-// `IsBuiltin int` chứ không phải bool: cột là INTEGER, và bool trong GORM sẽ
-// ghi 'true'/'false' — Postgres từ chối vì cột kiểu integer.
+// Path maps to the roadmap_paths table.
 type Path struct {
 	ID        int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Slug      string `gorm:"column:slug"`
@@ -28,8 +19,6 @@ type Path struct {
 	Deleted   int    `gorm:"column:deleted"`
 }
 
-// boolToInt chuyển bool của tầng application sang INTEGER 0|1 của Postgres.
-// Cột `is_builtin` là integer, GORM sẽ ghi 'true' nếu field kiểu bool.
 func boolToInt(b bool) int {
 	if b {
 		return 1
@@ -37,11 +26,9 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-// TableName khoá tên bảng — GORM đoán `roadmap_infra_paths` từ tên package.
 func (Path) TableName() string { return "roadmap_paths" }
 
-// Stage là row `roadmap_stages`. `Terrain`/`Direction` là metadata bản đồ
-// (migration 00004).
+// Stage maps to the roadmap_stages table.
 type Stage struct {
 	ID            int64   `gorm:"column:id;primaryKey;autoIncrement"`
 	PathID        int64   `gorm:"column:path_id"`
@@ -62,11 +49,9 @@ type Stage struct {
 	Deleted       int     `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Path.TableName).
 func (Stage) TableName() string { return "roadmap_stages" }
 
-// Topic là row `roadmap_topics`. `MapX`/`MapY` là *float64 vì NULL = để server
-// layout — phân biệt NULL với 0 là bắt buộc, node ở (0,0) là vị trí hợp lệ.
+// Topic maps to the roadmap_topics table.
 type Topic struct {
 	ID          int64    `gorm:"column:id;primaryKey;autoIncrement"`
 	StageID     int64    `gorm:"column:stage_id"`
@@ -86,10 +71,9 @@ type Topic struct {
 	Deleted     int      `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Path.TableName).
 func (Topic) TableName() string { return "roadmap_topics" }
 
-// Resource là row `roadmap_resources`.
+// Resource maps to the roadmap_resources table.
 type Resource struct {
 	ID        int64   `gorm:"column:id;primaryKey;autoIncrement"`
 	TopicID   int64   `gorm:"column:topic_id"`
@@ -104,10 +88,9 @@ type Resource struct {
 	Deleted   int     `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Path.TableName).
 func (Resource) TableName() string { return "roadmap_resources" }
 
-// Milestone là row `roadmap_milestones`.
+// Milestone maps to the roadmap_milestones table.
 type Milestone struct {
 	ID        int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	StageID   int64  `gorm:"column:stage_id"`
@@ -119,15 +102,9 @@ type Milestone struct {
 	Deleted   int    `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Path.TableName).
 func (Milestone) TableName() string { return "roadmap_milestones" }
 
-// bookmarkRow là row `roadmap_bookmarks` (amendment A1). Cột `tags` là CSV,
-// không phải bảng con — mỗi bookmark chỉ 1-3 tag, tách bảng là chi phí mà
-// không đổi truy vấn được.
-//
-// Tên `bookmarkRow` (không export như `Path`/`Stage`…) vì nó là struct GORM
-// thuần: DTO trả ra ngoài là `app.Bookmark`, ép kiểu trực tiếp như 5 struct kia.
+// bookmarkRow maps to the roadmap_bookmarks table.
 type bookmarkRow struct {
 	ID        int64   `gorm:"column:id;primaryKey;autoIncrement"`
 	Title     string  `gorm:"column:title"`
@@ -141,14 +118,7 @@ type bookmarkRow struct {
 	Deleted   int     `gorm:"column:deleted"`
 }
 
-// TableName khoá tên bảng (xem Path.TableName).
 func (bookmarkRow) TableName() string { return "roadmap_bookmarks" }
-
-// ── Chuyển đổi row ↔ application ────────────────────────────────────────────
-// Các struct trên và struct ở application/roadmap có CÙNG layout field (cùng
-// tên + cùng kiểu), nên ép kiểu trực tiếp thay vì viết 6 hàm chuyển tay — 1
-// đổi tên cột ở đây sẽ không đổi kiểu nên `go build` vẫn xanh. Đây là đánh
-// đổi chấp nhận được vì cả 2 đều là DTO nội bộ, không phải contract public.
 
 func pathToApp(p Path) app.Path {
 	out := app.Path{

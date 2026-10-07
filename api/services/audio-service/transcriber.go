@@ -69,13 +69,17 @@ type whisperTranscriber struct {
 	client *http.Client
 }
 
+// Name trả tên engine Whisper.
 func (w *whisperTranscriber) Name() string { return "faster-whisper" }
-func (w *whisperTranscriber) Real() bool   { return true }
 
+// Real báo engine Whisper nhận dạng audio thật.
+func (w *whisperTranscriber) Real() bool { return true }
+
+// Transcribe gửi audio multipart tới sidecar Whisper và chuẩn hoá kết quả.
 func (w *whisperTranscriber) Transcribe(ctx context.Context, audio []byte, filename, contentType, langHint string) (transcript, error) {
 	endpoint, err := url.Parse(w.url)
 	if err != nil {
-		return transcript{}, fmt.Errorf("WHISPER_URL sai cú pháp: %v", err)
+		return transcript{}, fmt.Errorf("whisper_url sai cú pháp: %v", err)
 	}
 	q := endpoint.Query()
 	if l := whisperLang(langHint); l != "" {
@@ -238,9 +242,13 @@ func whisperLang(hint string) string {
 // "ni hao" / "zh").
 type stubTranscriber struct{}
 
+// Name trả tên engine stub.
 func (stubTranscriber) Name() string { return "stub" }
-func (stubTranscriber) Real() bool   { return false }
 
+// Real báo engine stub KHÔNG nhận dạng audio thật.
+func (stubTranscriber) Real() bool { return false }
+
+// Transcribe trả transcript cố định "ni hao" / "zh".
 func (stubTranscriber) Transcribe(ctx context.Context, audio []byte, filename, contentType, langHint string) (transcript, error) {
 	if err := ctx.Err(); err != nil {
 		return transcript{}, err

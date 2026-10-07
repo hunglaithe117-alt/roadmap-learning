@@ -40,8 +40,8 @@ func Test_load_config_reads_env(t *testing.T) {
 	assert.Equal(t, "postgres://u:p@db:5432/x?sslmode=disable", cfg.DSN)
 	assert.Equal(t, "http://stt:9000/asr", cfg.WhisperURL)
 	assert.Equal(t, "/usr/local/bin/piper", cfg.PiperBin)
-	assert.Equal(t, "/models/zh.onnx", cfg.PiperModelZh)
-	assert.Equal(t, "/models/en.onnx", cfg.PiperModelEn)
+	assert.Equal(t, "/models/zh.onnx", cfg.PiperModelZH)
+	assert.Equal(t, "/models/en.onnx", cfg.PiperModelEN)
 	assert.Equal(t, "debug", cfg.GinMode)
 	assert.Equal(t, "warn", cfg.LogLevel)
 	assert.Equal(t, 42, cfg.MaxOpenConns)
@@ -69,7 +69,9 @@ func Test_parse_level(t *testing.T) {
 		{"debug", "DEBUG"}, {"INFO", "INFO"}, {" warn ", "WARN"},
 		{"warning", "WARN"}, {"error", "ERROR"}, {"", "INFO"}, {"nonsense", "INFO"},
 	} {
-		assert.Equal(t, c.want, ParseLevel(c.in).String(), "level %q", c.in)
+		t.Run(c.in, func(t *testing.T) {
+			assert.Equal(t, c.want, ParseLevel(c.in).String(), "level %q", c.in)
+		})
 	}
 }
 

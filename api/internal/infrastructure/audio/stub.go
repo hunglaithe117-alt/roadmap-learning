@@ -10,26 +10,21 @@ import (
 	audiodomain "langapp/internal/domain/audio"
 )
 
-// StubSynthesizer sinh WAV sóng sine để `<audio>` của trình duyệt phát được
-// offline khi không bật `audio-service`.
-//
-// Đây là port nguyên văn `StubTTSEngine` + `genSineWAV` ở `api/audio.go` v1
-// (kể cả hằng 16000Hz / 0.5s / 440Hz). Giữ nguyên để hành vi "chưa cấu hình
-// audio" không đổi: trước M4 app trả đúng WAV này, nếu đổi thì mọi test cũ
-// và mọi máy đang chạy không có audio-service đều đổi hành vi.
+// StubSynthesizer generates sine wave WAV audio offline when audio-service is disabled.
 type StubSynthesizer struct{}
 
-func (StubSynthesizer) Info() audiodomain.EngineInfo {
+// Info returns stub TTS engine metadata.
+func (s StubSynthesizer) Info() audiodomain.EngineInfo {
 	return audiodomain.NewEngineInfo("stub", audiodomain.KindTTS, false)
 }
 
+// Synthesize synthesizes sine wave WAV audio without language selection.
 func (s StubSynthesizer) Synthesize(ctx context.Context, text string) ([]byte, string, error) {
 	return s.SynthesizeLang(ctx, text, "")
 }
 
-// SynthesizeLang bỏ qua `lang`: stub không có voice nào để chọn. Giữ method để
-// handler gọi 1 đường duy nhất thay vì phải type-assert (port nguyên văn v1).
-func (StubSynthesizer) SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error) {
+// SynthesizeLang synthesizes sine wave WAV audio, ignoring language in the stub.
+func (s StubSynthesizer) SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, "", err
 	}
@@ -39,20 +34,7 @@ func (StubSynthesizer) SynthesizeLang(ctx context.Context, text, lang string) ([
 	return SineWAV(16000, 0.5, 440), "audio/wav", nil
 }
 
-// SineWAV dựng WAV mono PCM 16-bit.
-//
-// 3 bản sao đang tồn tại: hàm này, `services/audio-service/synthesizer.go`, và
-// `api/audio.go` (app v1). Chỉ 2 bản đầu là của M4.
-//
-// Lý do M4 chấp nhận nhân bản: đây là sinh WAV thuần, không phải quy tắc nghiệp
-// vụ — chênh lệch không sinh ra hành vi sai, chỉ tốn vài dòng. NHƯNG lập luận ban
-// đầu ("audio-service không import được package trong của app") là SAI, và nó là
-// lý do suy ra rằng `SineWAV` phải nhân bản. Đã gộp `toSimplified` cho đúng
-// (bảng 100 mục, lệch bảng = chấm sai oan); `SineWAV` để backlog M5–M7, ghi ở
-// `phases/task-memory/stack-v2-m4-remediation.md`.
-//
-// Hệ số cố định 16000Hz / 0.5s / 440Hz giữ nguyên v1: đổi là mọi máy chưa bật
-// audio-service đổi hành vi âm thanh.
+// SineWAV generates a 16-bit mono PCM WAV audio buffer.
 func SineWAV(sampleRate int, seconds, freqHz float64) []byte {
 	n := int(float64(sampleRate) * seconds)
 	data := make([]byte, 44+n*2)
@@ -76,19 +58,18 @@ func SineWAV(sampleRate int, seconds, freqHz float64) []byte {
 	return data
 }
 
-// StubTranscriber trả transcript cố định — port `StubSTTEngine` v1 (mặc định
-// "ni hao" / "zh").
+// StubTranscriber returns fixed transcripts for testing offline.
 type StubTranscriber struct {
-	// Text rỗng = mặc định "ni hao" (khớp v1).
 	Text string
-	// Lang rỗng = mặc định "zh".
 	Lang string
 }
 
-func (StubTranscriber) Info() audiodomain.EngineInfo {
+// Info returns stub STT engine metadata.
+func (s StubTranscriber) Info() audiodomain.EngineInfo {
 	return audiodomain.NewEngineInfo("stub", audiodomain.KindSTT, false)
 }
 
+// Transcribe returns a fixed transcript without word details.
 func (s StubTranscriber) Transcribe(ctx context.Context, audio []byte, filename, contentType string) (audiodomain.Transcript, error) {
 	return s.TranscribeDetailed(ctx, audio, filename, contentType, "")
 }

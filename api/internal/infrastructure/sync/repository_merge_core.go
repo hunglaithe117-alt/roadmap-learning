@@ -11,14 +11,7 @@ import (
 	app "langapp/internal/application/sync"
 )
 
-// File này hiện thực phần GHI của merge cho `decks` / `cards`.
-//
-// LUẬT KHÔNG ĐƯỢC PHÁ VỠ (xem đầu file package):
-//   - MỌI UPDATE/INSERT đều set `updated_at` TƯỜNG MINH, KHÔNG `Omit`.
-//   - Bắt buộc `WHERE id = ?` (Model theo INSTANCE có ID, không phải struct rỗng).
-//   - Cột NULL dùng `*string`/`*float64` để phân biệt NULL với chuỗi rỗng —
-//     `deck_id` NULL (stage chưa gắn deck) và `completed_at` NULL (node chưa
-//     xong) là 2 trạng thái khác nhau.
+// Write implementation of merge for decks and cards.
 
 // ── decks ───────────────────────────────────────────────────────────────────
 
@@ -32,14 +25,13 @@ type deckMergeRow struct {
 	Deleted   int
 }
 
-// TableName khoá tên bảng: GORM đoán `deck_merge_rows` từ tên struct, sai.
+// TableName returns the table name for deckMergeRow.
 func (deckMergeRow) TableName() string { return "decks" }
 
-// TableName khoá tên bảng (xem deckMergeRow.TableName).
+// TableName returns the table name for cardMergeRow.
 func (cardMergeRow) TableName() string { return "cards" }
 
-// DeckRows trả mọi deck local theo guid, KỂ CẢ tombstone (`deleted = 1`).
-// Bỏ tombstone khỏi map thì một deck đã xoá ở local sẽ bị peer "hồi sinh".
+// DeckRows returns all local decks by GUID, including tombstones.
 func (r *Repository) DeckRows(ctx context.Context, tx app.Tx) (map[string]app.DeckRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -52,7 +44,7 @@ func (r *Repository) DeckRows(ctx context.Context, tx app.Tx) (map[string]app.De
 	out := make(map[string]app.DeckRow, len(rows))
 	for _, row := range rows {
 		if row.GUID == "" {
-			continue // guid rỗng không định danh được (dữ liệu hỏng)
+			continue
 		}
 		out[row.GUID] = app.DeckRow{
 			ID: row.ID, GUID: row.GUID, Name: row.Name, Lang: row.Lang,
@@ -62,11 +54,7 @@ func (r *Repository) DeckRows(ctx context.Context, tx app.Tx) (map[string]app.De
 	return out, nil
 }
 
-// UpsertDeck chèn (found=false) hoặc ghi đè (found=true) 1 deck, `updated_at`
-// tường minh.
-//
-// `found=true` mà `ID = 0` = caller bảo update nhưng không có id → báo lỗi
-// thay vì sinh câu UPDATE không có `WHERE` (nguy hiểm hơn nhiều).
+// UpsertDeck inserts or updates a deck with explicit updated_at.
 func (r *Repository) UpsertDeck(ctx context.Context, tx app.Tx, d app.DeckRow, found bool) (int64, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -99,22 +87,15 @@ type cardMergeRow struct {
 	State      string
 	CreatedAt  string
 	Tone       *string
-	// `IPA` PHẢI có tag: không thì GORM suy tên cột thành `ip_a` (chữ viết
-	// tắt bị tách), cột thật trong `cards` là `ipa`. Hậu quả KHÔNG phải lỗi
-	// SQL (GORM đọc `SELECT *` rồi map theo tên) mà là field LUÔN nil ⇒
-	// `CardRows` không bao giờ trả `ipa` của bản local ⇒ `cardValues` thiếu
-	// khoá "ipa" ⇒ `differs()` luôn true với mọi thẻ có phiên âm, và luật
-	// "2 bản giống hệt → keep" không chạy. Chốt DRY trong
-	// `snapshot_columns_test.go` bắt được lỗi này.
-	IPA       *string `gorm:"column:ipa"`
-	Stress    *string
-	AudioURL  *string
-	GUID      string
-	UpdatedAt string
-	Deleted   int
+	IPA        *string `gorm:"column:ipa"`
+	Stress     *string
+	AudioURL   *string
+	GUID       string
+	UpdatedAt  string
+	Deleted    int
 }
 
-// CardRows trả mọi card local theo guid, kể cả tombstone.
+// CardRows returns all local cards by GUID, including tombstones.
 func (r *Repository) CardRows(ctx context.Context, tx app.Tx) (map[string]app.CardRow, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -146,8 +127,7 @@ func (r *Repository) CardRows(ctx context.Context, tx app.Tx) (map[string]app.Ca
 	return out, nil
 }
 
-// deckGUIDByID dựng bản đồ id→guid của deck. Cần khi đọc card local: `Decks`
-// trả map theo guid, còn card mang `deck_id` số.
+// deckGUIDByID returns a map of deck ID to GUID.
 func (r *Repository) deckGUIDByID(ctx context.Context, tx app.Tx) (map[int64]string, error) {
 	var rows []struct {
 		ID   int64
@@ -167,8 +147,7 @@ func (r *Repository) deckGUIDByID(ctx context.Context, tx app.Tx) (map[int64]str
 	return out, nil
 }
 
-// TombstoneCard tra card đang xoá mềm theo (deck_id, front) — dùng khi peer
-// re-create 1 thẻ mà local đã xoá.
+// TombstoneCard looks up a soft-deleted card by deck ID and front.
 func (r *Repository) TombstoneCard(ctx context.Context, tx app.Tx, deckID int64, front string) (int64, string, bool, error) {
 	var row struct {
 		ID   int64
@@ -183,8 +162,6 @@ func (r *Repository) TombstoneCard(ctx context.Context, tx app.Tx, deckID int64,
 		WHERE deck_id = ? AND front = ? AND deleted = 1
 		ORDER BY id LIMIT 1`, deckID, front).Row().Scan(&row.ID, &row.GUID)
 	if err != nil {
-		// `Row().Scan` trả `sql.ErrNoRows`, KHÔNG phải `gorm.ErrRecordNotFound` —
-		// so nhầm biến thành lỗi DB và làm hỏng cả merge.
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, "", false, nil
 		}
@@ -193,9 +170,7 @@ func (r *Repository) TombstoneCard(ctx context.Context, tx app.Tx, deckID int64,
 	return row.ID, row.GUID, true, nil
 }
 
-// LiveCardGUIDByFront tra guid của thẻ đang SỐNG cùng front. Dùng khi insert
-// đụng `ux_cards_deck_front` vì 2 máy cùng tạo 1 thẻ tay: giữ bản local và
-// ghi log xung đột thay vì báo lỗi làm hỏng cả merge.
+// LiveCardGUIDByFront looks up an active card by deck ID and front.
 func (r *Repository) LiveCardGUIDByFront(ctx context.Context, tx app.Tx, deckID int64, front string) (int64, string, bool, error) {
 	var row struct {
 		ID   int64
@@ -218,18 +193,7 @@ func (r *Repository) LiveCardGUIDByFront(ctx context.Context, tx app.Tx, deckID 
 	return row.ID, row.GUID, true, nil
 }
 
-// insertDeck chèn 1 deck, `ON CONFLICT` có arbiter + `RETURNING id`.
-//
-// VÌ SAO `ON CONFLICT` BẮT BUỘC Ở MỌI INSERT CỦA MERGE: Postgres **hủy cả
-// transaction** khi 1 câu lệnh vi phạm UNIQUE (khác hẳn SQLite v1 chỉ trả lỗi
-// cho câu lệnh đó). 2 máy cùng tạo 1 deck/thẻ tay là chuyện bình thường; nếu
-// để insert nổ UNIQUE thì mọi bảng đã merge trước đó cũng mất.
-// `id == 0` là tín hiệu "bị skip" — tương đương `INSERT OR IGNORE` của SQLite.
-//
-// Arbiter phải khai BÁO CHÍNH XÁC: `ON CONFLICT DO NOTHING` không chỉ định cột
-// thì Postgres không suy ra được arbiter và vẫn ném lỗi unique từ mọi index.
-// Với PARTIAL unique index (`ux_cards_deck_front ... WHERE deleted = 0`) phải
-// kèm cả index predicate — nếu không, lỗi 23505 quay lại và hủy cả merge.
+// insertDeck inserts a deck row, returning its ID or 0 on conflict.
 func insertDeck(db *gorm.DB, d app.DeckRow) (int64, error) {
 	var id int64
 	err := db.Raw(`INSERT INTO decks (name, lang, created_at, guid, updated_at, deleted)
@@ -240,7 +204,7 @@ func insertDeck(db *gorm.DB, d app.DeckRow) (int64, error) {
 	return id, err
 }
 
-// CardIDByGUID tra id của 1 card theo (deck, guid).
+// CardIDByGUID looks up a card ID by deck ID and GUID.
 func (r *Repository) CardIDByGUID(ctx context.Context, tx app.Tx, deckID int64, guid string) (int64, error) {
 	var id int64
 	db, dbErr := r.txCtx(ctx, tx)
@@ -255,12 +219,7 @@ func (r *Repository) CardIDByGUID(ctx context.Context, tx app.Tx, deckID int64, 
 	return id, nil
 }
 
-// UpsertCard chèn hoặc ghi đè 1 card, `updated_at` tường minh.
-//
-// Insert đụng `ux_cards_deck_front` (partial UNIQUE trên `deleted = 0`) khi 2
-// máy cùng tạo 1 thẻ tay: KHÔNG trả lỗi — tra thẻ sống cùng front, giữ bản
-// local, map cả 2 guid về cùng id để 2 máy hội tụ. Báo lỗi ở đây sẽ rollback
-// cả merge vì 1 việc vô hại.
+// UpsertCard inserts or updates a card with explicit updated_at.
 func (r *Repository) UpsertCard(ctx context.Context, tx app.Tx, c app.CardRow, found bool) (int64, bool, error) {
 	db, err := r.txCtx(ctx, tx)
 	if err != nil {
@@ -274,9 +233,6 @@ func (r *Repository) UpsertCard(ctx context.Context, tx app.Tx, c app.CardRow, f
 		if c.ID <= 0 {
 			return 0, false, fmt.Errorf("update card %s nhưng thiếu id local", c.GUID)
 		}
-		// `guid` CỐ Ý được ghi lại: đây là đường hồi sinh tombstone, nơi row
-		// local cũ phải nhận guid của peer để 2 máy hội tụ. Ở nhánh update
-		// thường `guid` trùng sẵn nên ghi lại là no-op.
 		err := db.Exec(`UPDATE cards SET deck_id = ?, front = ?, back = ?, pinyin = ?,
 			due_at = ?, stability = ?, difficulty = ?, reps = ?, lapses = ?, state = ?,
 			tone = ?, ipa = ?, stress = ?, audio_url = ?, guid = ?, deleted = ?,
@@ -288,8 +244,6 @@ func (r *Repository) UpsertCard(ctx context.Context, tx app.Tx, c app.CardRow, f
 		return c.ID, false, err
 	}
 	var id int64
-	// `ON CONFLICT` phải khai đúng arbiter — xem giải thích ở `insertDeck`.
-	// `id == 0` = bị skip.
 	err = db.Raw(`INSERT INTO cards (deck_id, front, back, pinyin, due_at,
 		stability, difficulty, reps, lapses, state, created_at,
 		tone, ipa, stress, audio_url, guid, updated_at, deleted)
@@ -305,9 +259,6 @@ func (r *Repository) UpsertCard(ctx context.Context, tx app.Tx, c app.CardRow, f
 	if id > 0 {
 		return id, false, nil
 	}
-	// Bị skip: 2 máy cùng tạo 1 thẻ tay cùng front. Tra thẻ sống cùng front để
-	// map 2 guid về cùng id và báo `dupKept` để caller ghi log xung đột —
-	// im lặng khiến user tưởng dữ liệu peer bị mất.
 	liveID, _, ok, lookupErr := r.LiveCardGUIDByFront(ctx, tx, deckID, c.Front)
 	if lookupErr != nil {
 		return 0, false, lookupErr
@@ -315,7 +266,6 @@ func (r *Repository) UpsertCard(ctx context.Context, tx app.Tx, c app.CardRow, f
 	if ok {
 		return liveID, true, nil
 	}
-	// Skip vì lý do khác (cùng guid): tra theo guid.
 	guidID, guidErr := r.CardIDByGUID(ctx, tx, deckID, c.GUID)
 	if guidErr != nil {
 		return 0, false, guidErr

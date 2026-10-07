@@ -773,7 +773,7 @@ type TopicInput struct {
 	Position   *int     `json:"position,omitempty"`
 	// 0 = bắt buộc, 1 = tham khảo. null = 0 (bắt buộc), khớp DEFAULT của cột.
 	IsOptional *int `json:"isOptional,omitempty"`
-	// null = để server layout. Ngoài viewBox 0 0 1000 2000 bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được).
+	// null = để server layout. Ngoài biên canvas bị từ chối 400 (node ngoài canvas thì M6 không scroll tới được).
 	MapX *float64 `json:"mapX,omitempty"`
 	MapY *float64 `json:"mapY,omitempty"`
 }
@@ -1030,7 +1030,7 @@ const (
 	ErrorCodeBadRequest ErrorCode = "BAD_REQUEST"
 	ErrorCodeNotFound   ErrorCode = "NOT_FOUND"
 	ErrorCodeConflict   ErrorCode = "CONFLICT"
-	// Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ `mutation.sync` khi chưa cấu hình nguồn snapshot peer, `/api/backup` trước khi có `pg_dump`. Thêm hằng thứ 5 mà quên `codeForStatus` sẽ rơi về INTERNAL và che message tiếng Việt.
+	// Tính năng chưa bật / chưa cấu hình (HTTP 501). KHÁC hẳn CONFLICT: 409 là "yêu cầu mâu thuẫn với trạng thái hiện tại", còn 501 là "server chưa có cách phục vụ việc này" — ví dụ `mutation.sync` khi chưa cấu hình nguồn snapshot peer. Thêm hằng thứ 5 mà quên `codeForStatus` sẽ rơi về INTERNAL và che message tiếng Việt.
 	ErrorCodeNotImplemented ErrorCode = "NOT_IMPLEMENTED"
 	ErrorCodeInternal       ErrorCode = "INTERNAL"
 )

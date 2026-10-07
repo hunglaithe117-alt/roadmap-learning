@@ -37,14 +37,17 @@ func testRouter(webDist string) *gin.Engine {
 // test khẳng định `Content-Type`/`X-Engine`, không cần âm thanh thật.
 type StubTTS struct{}
 
+// Info trả metadata của engine TTS stub.
 func (StubTTS) Info() audiodomain.EngineInfo {
 	return audiodomain.NewEngineInfo("stub", audiodomain.KindTTS, false)
 }
 
+// Synthesize trả bytes giả có tiền tố "RIFF" cùng tên text.
 func (StubTTS) Synthesize(ctx context.Context, text string) ([]byte, string, error) {
 	return ttsBytes(text), "audio/wav", nil
 }
 
+// SynthesizeLang trả bytes giả có gắn thêm `lang` để test kiểm việc truyền lang.
 func (StubTTS) SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error) {
 	return ttsBytes(text + "|" + lang), "audio/wav", nil
 }
@@ -53,12 +56,15 @@ func ttsBytes(text string) []byte {
 	return append([]byte("RIFF____WAVEfake:"+text), 0)
 }
 
+// StubSTT là engine STT stub trả transcript cố định cho test HTTP.
 type StubSTT struct{}
 
+// Info trả metadata của engine STT stub.
 func (StubSTT) Info() audiodomain.EngineInfo {
 	return audiodomain.NewEngineInfo("stub", audiodomain.KindSTT, false)
 }
 
+// Transcribe trả transcript cố định "ni hao" / "zh".
 func (StubSTT) Transcribe(ctx context.Context, audio []byte, filename, contentType string) (audiodomain.Transcript, error) {
 	return audiodomain.Transcript{Text: "ni hao", Lang: "zh"}, nil
 }
@@ -161,28 +167,6 @@ func Test_stt_rejects_empty_file(t *testing.T) {
 	require.Contains(t, w.Body.String(), "rỗng")
 }
 
-// ── /api/backup + /api/restore (M7) ────────────────────────────────────────
-
-// Backup/restore phải trả 501 (chưa có) chứ không 500 ("lỗi hệ thống").
-//
-// `VACUUM INTO` không tồn tại ở Postgres; tương đương là `pg_dump` thuộc M7.
-// 500 khiến client hiện "lỗi" cho thứ đơn giản là "chưa làm"; 501 là mã đúng
-// nghĩa và client có thể hiện "tính năng đang xây".
-func Test_backup_returns_501_not_500_while_port_is_unimplemented(t *testing.T) {
-	w := httptest.NewRecorder()
-	testRouter("").ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/backup", nil))
-
-	require.Equal(t, http.StatusNotImplemented, w.Code)
-	require.Contains(t, w.Body.String(), "M7")
-}
-
-func Test_restore_returns_501_while_port_is_unimplemented(t *testing.T) {
-	w := httptest.NewRecorder()
-	testRouter("").ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/restore", nil))
-
-	require.Equal(t, http.StatusNotImplemented, w.Code)
-}
-
 // ── CORS ────────────────────────────────────────────────────────────────────
 
 // Test CORS preflight trả 204 + header allow. Gin KHÔNG tự làm preflight —
@@ -193,14 +177,12 @@ func Test_cors_preflight_returns_204_with_allow_origin(t *testing.T) {
 	req.Header.Set("Origin", "http://localhost:5173")
 	w := httptest.NewRecorder()
 
-	e := testRouter("")
 	// Router mặc định `Dev=false` nên KHÔNG allow origin nào; bật Dev để test
 	// đúng nhánh allow-list.
 	devRouter := NewRouter(Options{
 		GinMode: "test", Dev: true, TTS: StubTTS{}, STT: StubSTT{},
 		Log: discardLogger(),
 	}).Engine
-	_ = e
 	devRouter.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusNoContent, w.Code)
@@ -278,12 +260,45 @@ func Test_static_404_when_web_dist_not_configured(t *testing.T) {
 	require.Contains(t, w.Body.String(), "không tìm thấy")
 }
 
+// ── `/api/*` lạ KHÔNG được rơi vào fallback SPA ──────────────────────────────
+//
+// Đường dẫn lạ ngoài `/api` vẫn trả `index.html` (client-side routing). Nhưng
+// `/api/*` là namespace API: trả 200 + HTML là client tưởng thành công rồi hỏng
+// lúc parse, lỗi hiện ra muộn và sai chỗ. Nhánh `WebDist == ""` đã trả 404 JSON;
+// test này khoá nhánh có SPA cho cùng hành vi.
+//
+// Cũng khoá việc `/api/backup` + `/api/restore` đã bị gỡ THẬT: trước khi có
+// guard này, chúng rơi vào `staticSPA` và trả **200 + index.html**, nên "đã xoá"
+// không kiểm chứng được bằng HTTP. Route 501 cũ cũng vậy.
+func Test_api_unknown_path_404_json_not_spa(t *testing.T) {
+	for _, path := range []string{"/api/backup", "/api/restore", "/api/khong-ton-tai", "/api"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			testRouter(writeWebDist(t)).ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+
+			require.Equal(t, http.StatusNotFound, w.Code, "%s phải 404", path)
+			require.Contains(t, w.Result().Header.Get("Content-Type"), "application/json", "%s phải trả JSON", path)
+			require.NotContains(t, w.Body.String(), "<!doctype html>", "%s không được rơi vào index.html", path)
+		})
+	}
+}
+
+// Nhưng đường dẫn lạ NGOÀI `/api` vẫn phải ra SPA — nếu không, deep-link kiểu
+// `/roadmap/<slug>` gõ tay sẽ chết.
+func Test_non_api_unknown_path_still_serves_spa(t *testing.T) {
+	w := httptest.NewRecorder()
+	testRouter(writeWebDist(t)).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/roadmap/khong-ton-tai", nil))
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Contains(t, w.Body.String(), "<!doctype html>")
+}
+
 // ── server timeout ──────────────────────────────────────────────────────────
 
 // gosec G112: `http.Server` không set timeout ⇒ connection treo vô hạn.
 func Test_server_sets_all_four_timeouts(t *testing.T) {
 	r := NewRouter(Options{GinMode: "test", TTS: StubTTS{}, STT: StubSTT{}, Log: discardLogger()})
-	srv := r.Server(DefaultServerTimeouts(), context.Background())
+	srv := r.Server(context.Background(), DefaultServerTimeouts())
 
 	require.NotZero(t, srv.ReadHeaderTimeout, "ReadHeaderTimeout = 0 sẽ dính gosec G112 và Slowloris")
 	require.NotZero(t, srv.ReadTimeout, "ReadTimeout = 0 sẽ dính gosec G112")
@@ -367,7 +382,11 @@ func Test_health_returns_503_when_db_unreachable(t *testing.T) {
 // Danh sách route đã đăng ký dưới `/api`. Test này chặn việc sau này thêm 1
 // endpoint JSON vào REST vì "tiện tay" — làm client quay lại gọi tuần tự và
 // phá vỡ đúng lý do STACK-V2 chuyển sang GraphQL.
-func Test_api_group_registers_exactly_the_five_binary_endpoints_plus_health(t *testing.T) {
+//
+// Nó cũng khoá việc ĐĂNG LẠI `/api/backup` + `/api/restore`: 2 endpoint ấy đã
+// bị gỡ vì `BackupPort` chưa bao giờ có hiện thực (chỉ trả 501). Thêm lại vào
+// danh sách `want` bên dưới ⇒ test này đỏ, đúng ý.
+func Test_api_group_registers_exactly_the_three_binary_endpoints_plus_health(t *testing.T) {
 	e := testRouter("")
 	got := map[string]bool{}
 	for _, r := range e.Routes() {
@@ -377,13 +396,15 @@ func Test_api_group_registers_exactly_the_five_binary_endpoints_plus_health(t *t
 		"GET /api/health",
 		"GET /api/tts",
 		"POST /api/stt",
-		"GET /api/backup",
-		"POST /api/restore",
 	}
 	for _, w := range want {
-		require.True(t, got[w], "thiếu route %s", w)
+		t.Run(w, func(t *testing.T) {
+			require.True(t, got[w], "thiếu route %s", w)
+		})
 	}
 	for r := range got {
-		require.Contains(t, want, r, "route %s không nằm trong danh sách 5 nhị phân + health", r)
+		t.Run(r, func(t *testing.T) {
+			require.Contains(t, want, r, "route %s không nằm trong danh sách 3 nhị phân + health", r)
+		})
 	}
 }

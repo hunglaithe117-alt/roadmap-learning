@@ -56,7 +56,7 @@ func Test_second_boot_seeds_nothing_and_keeps_user_edits(t *testing.T) {
 	before, err := c.Content.SearchDict(ctx, "你好", 5)
 	require.NoError(t, err)
 	require.NotEmpty(t, before, "bản đầu phải có dữ liệu từ điển để sửa")
-	cardsBefore := countAllCards(t, c, ctx)
+	cardsBefore := countAllCards(t, ctx, c)
 	require.Positive(t, cardsBefore)
 
 	// User sửa nghĩa 1 mục từ điển (nội dung học thuật seed, không phải nội
@@ -72,7 +72,7 @@ func Test_second_boot_seeds_nothing_and_keeps_user_edits(t *testing.T) {
 
 	require.NoError(t, c.Seed(ctx))
 
-	cardsAfter := countAllCards(t, c, ctx)
+	cardsAfter := countAllCards(t, ctx, c)
 	require.Equal(t, cardsBefore, cardsAfter,
 		"lần seed thứ 2 không được tạo thêm hay xoá thẻ nào")
 
@@ -88,7 +88,7 @@ func Test_second_boot_seeds_nothing_and_keeps_user_edits(t *testing.T) {
 // `SRS.ListCards(ctx, deckID)` chỉ liệt kê 1 deck, còn seed tạo 6 deck (4 HSK
 // + PVO + TMRND) nên phải cộng lại — gọi với 1 `deckID` cứng định sẽ đếm sai
 // và khiến assert "không nhân bản" so sánh 2 con số vô nghĩa.
-func countAllCards(t *testing.T, c *platform.Container, ctx context.Context) int {
+func countAllCards(t *testing.T, ctx context.Context, c *platform.Container) int {
 	t.Helper()
 	decks, err := c.SRS.ListDecks(ctx)
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func wireForSeed(t *testing.T, db *gorm.DB) *platform.Container {
 	audio, err := audioinfra.NewFromEnv("")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = audio.Close() })
-	c, err := platform.Wire(context.Background(), db, testLogger(), audio)
+	c, err := platform.Wire(db, testLogger(), audio)
 	require.NoError(t, err)
 	return c
 }

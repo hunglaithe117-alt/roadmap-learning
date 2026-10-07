@@ -1,6 +1,8 @@
 package practice
 
 import (
+	"context"
+	"fmt"
 	"sort"
 	"testing"
 	"time"
@@ -25,8 +27,18 @@ func textsOf(diff []DiffToken) []string {
 	return out
 }
 
+func Test_word_diff_canceled_context_returns_error(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	got, err := WordDiff(ctx, "I want to learn", "I want to learn")
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, got)
+}
+
 func Test_word_diff_identical_is_all_ok(t *testing.T) {
-	got := WordDiff("I want to learn", "I want to learn")
+	got, err := WordDiff(context.Background(), "I want to learn", "I want to learn")
+	require.NoError(t, err)
 	require.Len(t, got, 4)
 	for _, s := range statusOf(got) {
 		assert.Equal(t, WordOK, s)
@@ -34,17 +46,20 @@ func Test_word_diff_identical_is_all_ok(t *testing.T) {
 }
 
 func Test_word_diff_ignores_case_and_punctuation(t *testing.T) {
-	got := WordDiff("Hello, world.", "hello world")
+	got, err := WordDiff(context.Background(), "Hello, world.", "hello world")
+	require.NoError(t, err)
 	assert.Equal(t, []WordStatus{WordOK, WordOK}, statusOf(got), "hoa thường + dấu câu không được tính sai")
 	assert.Equal(t, []string{"Hello,", "world."}, textsOf(got), "hiển thị text gốc của câu mẫu")
 }
 
 func Test_word_diff_normalizes_traditional_to_simplified(t *testing.T) {
 	// Whisper trả phồn, deck mẫu dùng giản — không convert thì chấm sai oan.
-	got := WordDiff("我学习广东话", "我学习广东话")
+	got, err := WordDiff(context.Background(), "我学习广东话", "我学习广东话")
+	require.NoError(t, err)
 	assert.Equal(t, []WordStatus{WordOK}, statusOf(got))
 
-	diff, wrong, score := Compare("我学习广东话", "我学习广东话")
+	diff, wrong, score, err := Compare(context.Background(), "我学习广东话", "我学习广东话")
+	require.NoError(t, err)
 	assert.Empty(t, wrong)
 	assert.Equal(t, 1.0, score)
 	assert.Len(t, diff, 1)
@@ -52,51 +67,62 @@ func Test_word_diff_normalizes_traditional_to_simplified(t *testing.T) {
 
 func Test_word_diff_missing_and_extra_pair_merge_into_wrong(t *testing.T) {
 	// "the" bị đọc thành "a": LCS gặp missing("the") + extra("a") liền kề.
-	got := WordDiff("I saw the cat", "I saw a cat")
+	got, err := WordDiff(context.Background(), "I saw the cat", "I saw a cat")
+	require.NoError(t, err)
 	assert.Equal(t, []WordStatus{WordOK, WordOK, WordWrong, WordOK}, statusOf(got))
 	assert.Equal(t, []string{"the→a"}, []string{got[2].Text})
 }
 
 func Test_word_diff_missing_without_extra(t *testing.T) {
-	got := WordDiff("I want to learn", "I learn")
+	got, err := WordDiff(context.Background(), "I want to learn", "I learn")
+	require.NoError(t, err)
 	assert.Contains(t, statusOf(got), WordMissing)
 	assert.NotContains(t, statusOf(got), WordExtra)
 }
 
 func Test_word_diff_extra_without_missing(t *testing.T) {
-	got := WordDiff("I learn", "I want to learn")
+	got, err := WordDiff(context.Background(), "I learn", "I want to learn")
+	require.NoError(t, err)
 	assert.Contains(t, statusOf(got), WordExtra)
 	assert.NotContains(t, statusOf(got), WordMissing)
 }
 
 func Test_word_diff_empty_got_marks_everything_missing(t *testing.T) {
-	got := WordDiff("one two three", "")
+	got, err := WordDiff(context.Background(), "one two three", "")
+	require.NoError(t, err)
 	assert.Equal(t, []WordStatus{WordMissing, WordMissing, WordMissing}, statusOf(got))
 }
 
 func Test_word_diff_empty_expected_marks_everything_extra(t *testing.T) {
 	// Câu mẫu rỗng: không có gì để khớp, mọi từ trong transcript là thừa.
-	got := WordDiff("", "something")
+	got, err := WordDiff(context.Background(), "", "something")
+	require.NoError(t, err)
 	assert.Equal(t, []WordStatus{WordExtra}, statusOf(got))
 	assert.Empty(t, WrongWords(got), "từ thừa không vào sổ lỗi")
-	assert.Empty(t, WordDiff("", ""))
+	empty, err := WordDiff(context.Background(), "", "")
+	require.NoError(t, err)
+	assert.Empty(t, empty)
 }
 
 func Test_wrong_words_excludes_extra(t *testing.T) {
-	got := WordDiff("I saw the cat", "I saw a cat")
+	got, err := WordDiff(context.Background(), "I saw the cat", "I saw a cat")
+	require.NoError(t, err)
 	assert.Equal(t, []string{"the→a"}, WrongWords(got),
 		"từ thừa là lỗi engine, không phải từ user cần ôn")
 }
 
 func Test_diff_score_ratio_and_zero_case(t *testing.T) {
-	perfect, _, score := Compare("one two three", "one two three")
+	perfect, _, score, err := Compare(context.Background(), "one two three", "one two three")
+	require.NoError(t, err)
 	assert.Equal(t, 1.0, score)
 	assert.Equal(t, []WordStatus{WordOK, WordOK, WordOK}, statusOf(perfect))
 
-	_, _, score = Compare("one two three", "one two")
+	_, _, score, err = Compare(context.Background(), "one two three", "one two")
+	require.NoError(t, err)
 	assert.InDelta(t, 2.0/3.0, score, 1e-9)
 
-	_, _, score = Compare("", "anything")
+	_, _, score, err = Compare(context.Background(), "", "anything")
+	require.NoError(t, err)
 	assert.Equal(t, 0.0, score, "câu mẫu rỗng -> 0 chứ không chia 0")
 }
 
@@ -126,8 +152,10 @@ func Test_normalize_rate_defaults_zero_and_rejects_out_of_range(t *testing.T) {
 	assert.Equal(t, 1.25, got)
 
 	for _, bad := range []float64{0.4, 1.6, -0.5} {
-		_, err := NormalizeRate(bad)
-		require.ErrorIs(t, err, ErrRateOutOfRange, "rate %v", bad)
+		t.Run(fmt.Sprintf("rate=%v", bad), func(t *testing.T) {
+			_, err := NormalizeRate(bad)
+			require.ErrorIs(t, err, ErrRateOutOfRange, "rate %v", bad)
+		})
 	}
 }
 
@@ -176,14 +204,17 @@ func Test_word_status_values_are_stable(t *testing.T) {
 }
 
 func Test_diff_is_deterministic(t *testing.T) {
-	a := WordDiff("one two three four", "one two nine four")
-	b := WordDiff("one two three four", "one two nine four")
+	a, err := WordDiff(context.Background(), "one two three four", "one two nine four")
+	require.NoError(t, err)
+	b, err := WordDiff(context.Background(), "one two three four", "one two nine four")
+	require.NoError(t, err)
 	assert.Equal(t, textsOf(a), textsOf(b))
 	assert.Equal(t, statusOf(a), statusOf(b))
 }
 
 func Test_recording_holds_compare_output(t *testing.T) {
-	diff, wrong, score := Compare("I want to learn", "I want to lern")
+	diff, wrong, score, err := Compare(context.Background(), "I want to learn", "I want to lern")
+	require.NoError(t, err)
 	rec := Recording{CardID: 1, Transcript: "I want to lern", Diff: diff, Wrong: wrong, Score: score}
 	assert.Equal(t, 0.75, rec.Score, "3/4 từ đúng")
 	assert.Equal(t, []string{"learn→lern"}, rec.Wrong, "cặp sai gộp lại để đọc")

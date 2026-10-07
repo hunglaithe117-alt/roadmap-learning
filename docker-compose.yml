@@ -74,6 +74,35 @@ services:
       # thật: WHISPER_URL=http://stt:9000/asr docker compose --profile v2 --profile audio --profile stt up
       WHISPER_URL: ${WHISPER_URL:-}
     restart: unless-stopped
+    # BẮT BUỘC ghi đè healthcheck của IMAGE (không có khối này thì service
+    # dùng luôn `HEALTHCHECK` trong `Dockerfile` — cái đó viết cho entrypoint
+    # `langapp-server`). Đó chính là gốc rễ của bug "audio-service luôn
+    # unhealthy": dùng CHUNG image ⇒ dùng chung healthcheck, mà healthcheck
+    # đó là HTTP `GET :8080/api/health`. audio-service là gRPC ở :9090, không
+    # có HTTP server nào ⇒ đỏ vĩnh viễn trong khi TTS vẫn trả 200 bình
+    # thường. Healthcheck luôn đỏ ⇒ cảnh báo mất giá trị.
+    #
+    # Vì sao probe Go tự viết (`/app/audio-health-probe`) chứ không dùng
+    # `grpc_health_probe`:
+    #   - `grpc_health_probe` KHÔNG có trong image (đã kiểm: `command -v` rỗng;
+    #     image là `python:3.11-slim-bookworm` + piper wheel). Thêm nó nghĩa là
+    #     tải 1 binary từ release bên ngoài vào Dockerfile + thêm ~5MB.
+    #   - Script Python cũng không được: image KHÔNG có `grpcio` (đã kiểm:
+    #     `ModuleNotFoundError: No module named 'grpc'`), cài thêm để chạy đúng
+    #     1 lệnh probe là không đáng.
+    #   - Go thì đã có sẵn: `google.golang.org/grpc` là require của module
+    #     này, toolchain đã có ở stage `apibuild`. Probe là static binary
+    #     CGO_ENABLED=0 ~2MB, KHÔNG thêm image, KHÔNG thêm dependency.
+    # `audio-service` đã đăng ký `healthpb.RegisterHealthServer`
+    # (`api/services/audio-service/main.go:70`) nên `Check` là hợp lệ.
+    healthcheck:
+      test: ["CMD", "/app/audio-health-probe"]
+      interval: 30s
+      timeout: 5s
+      # Piper exec + Whisper (nếu bật) mất lâu hơn app; 15s cho đủ thời gian
+      # set status thay vì báo đỏ ngay lúc boot rồi tự xanh lại.
+      start_period: 15s
+      retries: 3
 
   # T7.2 — faster-whisper sidecar (image onerahmet/openai-whisper-asr-webservice).
   # Endpoint: POST /asr (field "audio_file", query language/vad_filter/beam_size).
@@ -121,6 +150,12 @@ services:
       # /var/lib/postgresql/data (docker-library/postgres#1259) — phải mount
       # ở /var/lib/postgresql để `pg_upgrade --link` không vỡ khi nâng version.
       - postgres-data:/var/lib/postgresql
+      # Tạo database TEST `langapp_test` lúc initdb — xem file để biết vì sao
+      # 1 container 2 database thay vì service `postgres-test` riêng.
+      #
+      # ⚠️ CHỈ CHẠY LẦN ĐẦU (khi volume còn rỗng). Volume đã có sẵn thì script
+      # không chạy ⇒ `make db-up` vẫn tự tạo idempotent. Hai lớp độc lập.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U langapp -d langapp"]

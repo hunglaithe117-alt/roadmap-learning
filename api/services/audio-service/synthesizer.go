@@ -14,40 +14,24 @@ import (
 )
 
 const (
-	// maxTextRunes chặn 1 request tts quá dài — khớp `maxTTSTextLen` của v1
-	// (api/audio.go). Không có chặn này, 1 request có thể bắt Piper tổng hợp
-	// hàng trăm KB và giữ 1 child process trong lúc đó.
 	maxTextRunes = 500
-	// synthTimeout là trần của 1 lần gọi Piper. Piper mất ~1s cho 1 câu;
-	// 30s là ngân sách cho câu dài nhất rồi bỏ.
 	synthTimeout = 30 * time.Second
-	// chunkSize là kích thước 1 `Chunk` khi stream. 32KB = đúng 1 frame
-	// media chunk hợp lý để client ghép, không phải cắt WAV giữa chừng.
-	chunkSize = 32 << 10
+	chunkSize    = 32 << 10
 )
 
-// synthesizer là đằng sau interface `Audio.Synthesize`. Tách interface ở
-// đây (thay vì dùng thẳng interface của domain/audio) vì tiến trình này là
-// RANH GIỚI SERVICE: nó không được import tầng trong của app, chỉ nói chuyện
-// qua proto. Interface ở domain vẫn là hợp đồng mà app bind ở
-// internal/infrastructure/audio.
+// synthesizer abstracts speech synthesis engines.
 type synthesizer interface {
 	SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error)
 	Name() string
 	Real() bool
 }
 
-// piperSynthesizer chạy `echo <text> | $PIPER_BIN --model <voice>
-// --output_file <tmp.wav>` — port nguyên văn từ `PiperTTSEngine.SynthesizeLang`
-// ở api/audio.go v1, giữ nguyên vì hành vi (chọn voice theo lang, fallback
-// voice chung) đã có test.
+// piperSynthesizer generates audio using the Piper neural TTS binary.
 type piperSynthesizer struct {
 	bin, model, modelZH, modelEN string
 }
 
-// newSynthesizerFromEnv trả stub khi không có voice file nào tồn tại, để app
-// chạy được (và test được) không cần kéo model 752MB. Cùng luật với
-// `NewTTSEngineFromEnv` v1.
+// newSynthesizerFromEnv constructs a synthesizer from environment variables or falls back to stub.
 func newSynthesizerFromEnv(log *slog.Logger) (synthesizer, error) {
 	shared := strings.TrimSpace(os.Getenv("PIPER_MODEL"))
 	zh := strings.TrimSpace(os.Getenv("PIPER_MODEL_ZH"))
@@ -63,11 +47,9 @@ func newSynthesizerFromEnv(log *slog.Logger) (synthesizer, error) {
 		bin = "piper"
 	}
 	if _, err := exec.LookPath(bin); err != nil {
-		log.Info("không thấy piper binary, TTS dùng stub sine", slog.String("bin", bin))
+		log.Info("piper binary not found, TTS falling back to stub", slog.String("bin", bin))
 		return stubSynthesizer{}, nil
 	}
-	// Bỏ voice cấu hình nhưng không tồn tại, giữ cái nào là file thật — cùng
-	// hành vi v1.
 	exists := func(p string) bool {
 		if p == "" {
 			return false
@@ -85,17 +67,19 @@ func newSynthesizerFromEnv(log *slog.Logger) (synthesizer, error) {
 		shared = ""
 	}
 	if zh == "" && en == "" && shared == "" {
-		log.Info("không có voice piper nào tồn tại, TTS dùng stub sine")
+		log.Info("no piper voice models found, TTS falling back to stub")
 		return stubSynthesizer{}, nil
 	}
 	return piperSynthesizer{bin: bin, model: shared, modelZH: zh, modelEN: en}, nil
 }
 
+// Name returns the name of the Piper engine.
 func (p piperSynthesizer) Name() string { return "piper" }
-func (p piperSynthesizer) Real() bool   { return true }
 
-// ModelFor chọn file voice theo gợi ý lang. Ngôn ngữ lạ rơi về voice chung,
-// và voice chung rỗng thì engine stub phía trên đã thay thế rồi.
+// Real indicates whether this engine produces real speech audio.
+func (p piperSynthesizer) Real() bool { return true }
+
+// ModelFor resolves the model file path based on language hint.
 func (p piperSynthesizer) ModelFor(lang string) string {
 	switch strings.ToLower(strings.TrimSpace(lang)) {
 	case "zh", "zh-cn", "zh_cn", "cn":
@@ -110,19 +94,17 @@ func (p piperSynthesizer) ModelFor(lang string) string {
 	return p.model
 }
 
-// SynthesizeLang là hiện thực `synthesizer`. `lang` chọn voice; engine không
-// có voice khớp thì rơi về voice chung, KHÔNG phải lỗi (giữ hành vi v1 khi
-// ModelFor rỗng — `newSynthesizerFromEnv` đã thay bằng stub trong trường hợp đó).
+// SynthesizeLang synthesizes speech audio for text with language-specific voice.
 func (p piperSynthesizer) SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error) {
 	if strings.TrimSpace(text) == "" {
 		return nil, "", fmt.Errorf("empty text")
 	}
 	if r := len([]rune(text)); r > maxTextRunes {
-		return nil, "", fmt.Errorf("text quá dài: %d ký tự (tối đa %d)", r, maxTextRunes)
+		return nil, "", fmt.Errorf("text too long: %d characters (max %d)", r, maxTextRunes)
 	}
 	model := p.ModelFor(lang)
 	if model == "" {
-		return nil, "", fmt.Errorf("piper: không có voice cho lang %q", lang)
+		return nil, "", fmt.Errorf("piper: missing voice for lang %q", lang)
 	}
 	ctx, cancel := context.WithTimeout(ctx, synthTimeout)
 	defer cancel()
@@ -149,13 +131,16 @@ func (p piperSynthesizer) SynthesizeLang(ctx context.Context, text, lang string)
 	return data, "audio/wav", nil
 }
 
-// stubSynthesizer sinh WAV sóng sine để `<audio>` của trình duyệt phát được
-// offline. Port nguyên văn `genSineWAV` ở api/audio.go v1.
+// stubSynthesizer generates synthetic sine-wave audio for testing.
 type stubSynthesizer struct{}
 
+// Name returns the stub engine name.
 func (stubSynthesizer) Name() string { return "stub" }
-func (stubSynthesizer) Real() bool   { return false }
 
+// Real reports false for the stub engine.
+func (stubSynthesizer) Real() bool { return false }
+
+// SynthesizeLang returns a generated sine-wave WAV.
 func (stubSynthesizer) SynthesizeLang(ctx context.Context, text, lang string) ([]byte, string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, "", err

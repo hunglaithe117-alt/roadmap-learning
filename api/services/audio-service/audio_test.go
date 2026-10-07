@@ -160,7 +160,9 @@ func Test_to_simplified_covers_every_traditional_char_in_migration_seed(t *testi
 	for trad, simp := range map[rune]rune{
 		'學': '学', '習': '习', '漢': '汉', '語': '语', '們': '们', '這': '这', '個': '个',
 	} {
-		require.Equal(t, string(simp), toSimplified(string(trad)))
+		t.Run(string(trad), func(t *testing.T) {
+			require.Equal(t, string(simp), toSimplified(string(trad)))
+		})
 	}
 	require.True(t, hasTraditional("我們學習"), "HasTraditional phải phát hiện chữ phồn")
 	require.Equal(t, "我们学习", toSimplified("我们学习"), "đã giản thì idempotent")
@@ -275,7 +277,7 @@ func Test_run_rejects_bad_listen_address(t *testing.T) {
 	// Bind 1 cổng đang bận phải fail lúc boot chứ không lắng nghe sai chỗ.
 	busy, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	defer busy.Close()
+	t.Cleanup(func() { _ = busy.Close() })
 	t.Setenv("AUDIO_GRPC_ADDR", busy.Addr().String())
 
 	err = run(newLogger("error"))

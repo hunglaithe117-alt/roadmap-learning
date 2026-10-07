@@ -51,7 +51,7 @@ func (e *Engine) DetailedTranscriber() audiodomain.DetailedTranscriber {
 	return nil
 }
 
-// Close đóng conn gRPC. Nil-safe để `defer` không cần if.
+// Close closes the underlying gRPC client connection.
 func (e *Engine) Close() error {
 	if e == nil || e.conn == nil {
 		return nil
@@ -59,14 +59,7 @@ func (e *Engine) Close() error {
 	return e.conn.Close()
 }
 
-// TTSEngine trả `EngineInfo` của chiều TTS, đọc TRỰC TIẾP từ `engineCache` của
-// adapter — KHÔNG phải bản sao `Engine.EngineInfo`.
-//
-// Vì sao: `engineCache` mới là nguồn sự thật sau request audio đầu tiên (service
-// báo tên engine thật qua `SynthesizeResponse.Real`). Bản sao `Engine.EngineInfo`
-// là giá trị TĨNH lúc boot, nên nó không bao giờ phản ánh engine thật — và
-// `/api/health` đọc chính bản sao đó nên luôn báo `degraded`, khiến
-// HEALTHCHECK của Docker đỏ vĩnh viễn.
+// TTSEngine returns TTS engine info directly from the adapter.
 func (e *Engine) TTSEngine() audiodomain.EngineInfo {
 	if e == nil {
 		return audiodomain.NewEngineInfo("chưa cấu hình", audiodomain.KindTTS, false)
@@ -74,7 +67,7 @@ func (e *Engine) TTSEngine() audiodomain.EngineInfo {
 	return e.TTSSynth.Info()
 }
 
-// STTEngine là `TTSEngine` cho chiều STT.
+// STTEngine returns STT engine info directly from the adapter.
 func (e *Engine) STTEngine() audiodomain.EngineInfo {
 	if e == nil {
 		return audiodomain.NewEngineInfo("chưa cấu hình", audiodomain.KindSTT, false)
@@ -82,36 +75,22 @@ func (e *Engine) STTEngine() audiodomain.EngineInfo {
 	return e.STTSTT.Info()
 }
 
-// EngineInfo là viết tắt của `TTSEngine()`, dành cho log lúc boot và cho code
-// đã quen với tên cũ. Vẫn đọc adapter ⇒ không quay lại bản sao tĩnh.
+// EngineInfo returns the TTS engine info.
 func (e *Engine) EngineInfo() audiodomain.EngineInfo { return e.TTSEngine() }
 
-// IsReal báo audio có phải engine THẬT không — `/api/health` dùng để phân biệt
-// `ok` với `degraded`.
-//
-// Với stub, `Real` là false VĪA KHI DỰNG (không cần chờ request nào), nên
-// `degraded` là KẾT QUẢ ĐÚNG NGAY từ lần health đầu tiên — đây là thứ F3 đòi hỏi:
-// trước đó `Engine.Real` là hằng `false` ở cả hai nhánh và không ai gán lại, nên
-// `degraded` là ngẫu nhiên chứ không phản ánh gì.
+// IsReal reports whether both TTS and STT are real engines.
 func (e *Engine) IsReal() bool {
 	return e.TTSEngine().Real && e.STTEngine().Real
 }
 
-// NewFromEnv đọc `AUDIO_GRPC_ADDR` rồi dựng engine tương ứng.
-//
-// Không `Ping` lúc boot: `grpc.NewClient` là lazy, service có thể còn đang
-// khởi động cùng compose. Healthcheck của audio-service (`grpc_health_probe`)
-// là chỗ đúng để đòi nó sẵn sàng; app chỉ cần biết có dùng service hay không.
+// NewFromEnv constructs an Engine using the given gRPC address or returns stubs if empty.
 func NewFromEnv(addr string) (*Engine, error) {
 	addr = strings.TrimSpace(addr)
 	if addr == "" {
 		return &Engine{
 			TTSSynth: StubSynthesizer{},
 			STTSTT:   StubTranscriber{},
-			// Không còn `EngineInfo`/`Real` làm trạng thái: `TTSEngine()`/`IsReal()`
-			// đọc thẳng adapter, nên không có bản sao nào có thể lệch. Giữ 2 field
-			// cũ là chính là nguồn của F3.
-			Address: "",
+			Address:  "",
 		}, nil
 	}
 	conn, err := Dial(addr)
@@ -128,12 +107,11 @@ func NewFromEnv(addr string) (*Engine, error) {
 	}, nil
 }
 
-// NewFromEnvOS là biến thể đọc `AUDIO_GRPC_ADDR` từ môi trường — dùng ở
-// `platform.Build` để không phải biết tên biến ở tầng DI.
+// NewFromEnvOS constructs an Engine using AUDIO_GRPC_ADDR from the environment.
 func NewFromEnvOS() (*Engine, error) {
 	engine, err := NewFromEnv(os.Getenv("AUDIO_GRPC_ADDR"))
 	if err != nil {
-		return nil, fmt.Errorf("dựng audio client: %w", err)
+		return nil, fmt.Errorf("construct audio client: %w", err)
 	}
 	return engine, nil
 }

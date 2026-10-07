@@ -189,7 +189,7 @@ func Test_clear_map_alone_is_a_valid_patch(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// ── F7: deck.lang phải khớp path.language; GetPath trả deck cho M6 ───────────
+// ── F7: deck.lang phải khớp path.language; PathTree trả deck cho M6 ───────────
 
 func Test_create_stage_rejects_deck_with_mismatched_language(t *testing.T) {
 	repo := newFakeRepo()
@@ -254,7 +254,7 @@ func Test_get_path_exposes_deck_name_and_lang_for_review_button(t *testing.T) {
 	_, err = svc.CreateStage(ctx, "p", StageInput{Slug: "g", Title: "G", DeckID: &zhDeck})
 	require.NoError(t, err)
 
-	view, err := svc.GetPath(ctx, "p")
+	view, err := svc.PathTree(ctx, "p")
 	require.NoError(t, err)
 	require.Len(t, view.Stages, 1)
 	require.NotNil(t, view.Stages[0].Deck, "M6 cần deck_name/deck_lang để hiện nút 'vào /review'")
@@ -271,7 +271,7 @@ func Test_get_path_stage_without_deck_leaves_ref_nil(t *testing.T) {
 	_, err = svc.CreateStage(ctx, "p", StageInput{Slug: "g", Title: "G"})
 	require.NoError(t, err)
 
-	view, err := svc.GetPath(ctx, "p")
+	view, err := svc.PathTree(ctx, "p")
 	require.NoError(t, err)
 	require.Len(t, view.Stages, 1)
 	assert.Nil(t, view.Stages[0].Deck)

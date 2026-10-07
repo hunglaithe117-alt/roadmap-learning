@@ -7,22 +7,18 @@ import (
 	audiopb "langapp/proto/audio/v1"
 )
 
-// server hiện thực `audiopb.AudioServer`. Mỗi method chỉ là adapter mỏng:
-// nhận request protobuf → gọi synthesizer/transcriber → trả response protobuf.
-// Không có business logic ở đây — nếu có, nó đã thuộc về app và phải nằm ở
-// `internal/domain` hoặc `internal/application`.
+// server implements audiopb.AudioServer.
 type server struct {
 	synth       synthesizer
 	transcriber transcriber
 	log         *slog.Logger
 }
 
+// Synthesize synthesizes speech audio from text using the configured synthesizer.
 func (s *server) Synthesize(ctx context.Context, req *audiopb.SynthesizeRequest) (*audiopb.SynthesizeResponse, error) {
 	audio, contentType, err := s.synth.SynthesizeLang(ctx, req.GetText(), req.GetLang())
 	if err != nil {
-		// Trả lỗi nguyên văn: app chuyển thành 502/504 theo mã, và message ở
-		// log phía app phải nói đúng engine hỏng gì — không phải "internal error".
-		s.log.Error("synthesize thất bại", slog.String("err", err.Error()))
+		s.log.Error("synthesize failed", slog.String("err", err.Error()))
 		return nil, err
 	}
 	if contentType == "" {
@@ -36,13 +32,14 @@ func (s *server) Synthesize(ctx context.Context, req *audiopb.SynthesizeRequest)
 	}, nil
 }
 
+// Transcribe transcribes speech audio to text using the configured transcriber.
 func (s *server) Transcribe(ctx context.Context, req *audiopb.TranscribeRequest) (*audiopb.TranscribeResponse, error) {
 	if len(req.GetAudio()) == 0 {
-		return nil, errEmptyAudio
+		return nil, ErrEmptyAudio
 	}
 	res, err := s.transcriber.Transcribe(ctx, req.GetAudio(), req.GetFilename(), req.GetContentType(), req.GetLang())
 	if err != nil {
-		s.log.Error("transcribe thất bại", slog.String("err", err.Error()))
+		s.log.Error("transcribe failed", slog.String("err", err.Error()))
 		return nil, err
 	}
 	out := &audiopb.TranscribeResponse{
@@ -63,13 +60,7 @@ func (s *server) Transcribe(ctx context.Context, req *audiopb.TranscribeRequest)
 	return out, nil
 }
 
-// StreamSynthesize tổng hợp rồi cắt WAV thành các `Chunk`.
-//
-// Vì sao KHÔNG stream từng byte của Piper: Piper chỉ ghi file khi xong, không
-// có API xuất theo luồng. Giả vờ streaming bằng cách cắt buffer sau khi đã đợi
-// hết chỉ làm client chờ lâu hơn chứ không giảm độ trễ. Cắt chunk vẫn có
-// ích thật: client nhận được phần đầu tiên sớm hơn 1 message 10MB, và
-// `maxAudioBytes` của client không cần nâng theo độ dài câu.
+// StreamSynthesize synthesizes audio and streams it in chunks.
 func (s *server) StreamSynthesize(req *audiopb.StreamSynthesizeRequest, stream audiopb.Audio_StreamSynthesizeServer) error {
 	audio, _, err := s.synth.SynthesizeLang(stream.Context(), req.GetText(), req.GetLang())
 	if err != nil {

@@ -1,18 +1,11 @@
-// Package contentinfra là hiện thực GORM của bounded context content: đây là
-// nơi DUY NHẤT trong context này được phép import gorm.io
-// (STACK-V2-PLAN §2).
+// Package contentinfra provides GORM models and repository implementations for content.
 package contentinfra
 
 import (
 	app "langapp/internal/application/content"
 )
 
-// Dict là row bảng `dict` (chữ Hán + pinyin có số thanh + nghĩa).
-//
-// KHÔNG map cột `search_vector`: cột đó do trigger `trg_dict_search_vector`
-// sinh ra, và GORM không cần biết tới nó. Map vào struct nghĩa là GORM sẽ thử
-// ghi ngược giá trị trigger vừa tạo (STACK-V2-PLAN §8: "GORM có thể bypass
-// trigger"). Cùng lý do `en_dict` không map `search_vector` của nó.
+// Dict represents a database row in the dict table.
 type Dict struct {
 	ID     int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Hanzi  string `gorm:"column:hanzi"`
@@ -20,10 +13,10 @@ type Dict struct {
 	Nghia  string `gorm:"column:nghia"`
 }
 
-// TableName khoá tên bảng — GORM đoán `content_infra_dicts` từ tên package.
+// TableName returns the table name for Dict.
 func (Dict) TableName() string { return "dict" }
 
-// EnDict là row bảng `en_dict`.
+// EnDict represents a database row in the en_dict table.
 type EnDict struct {
 	ID      int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Lang    string `gorm:"column:lang"`
@@ -32,15 +25,10 @@ type EnDict struct {
 	Gloss   string `gorm:"column:gloss"`
 }
 
-// TableName khoá tên bảng (xem Dict.TableName).
+// TableName returns the table name for EnDict.
 func (EnDict) TableName() string { return "en_dict" }
 
-// Note là row bảng `notes` — bảng DÙNG CHUNG cho 3 context, mỗi context 1
-// prefix reserved (content: THIEU|, practice: SHADOW|/ERR|). Không có
-// `deleted`: note là append-only, xoá là xoá thật.
-//
-// `CreatedAt string` + `autoCreateTime:false` vì cột là TEXT RFC3339; field
-// tên `CreatedAt` kiểu time.Time sẽ bị GORM tự ghi đè bằng giờ máy.
+// Note represents a database row in the notes table.
 type Note struct {
 	ID        int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	CardID    *int64 `gorm:"column:card_id"`
@@ -49,7 +37,7 @@ type Note struct {
 	GUID      string `gorm:"column:guid"`
 }
 
-// TableName khoá tên bảng (xem Dict.TableName).
+// TableName returns the table name for Note.
 func (Note) TableName() string { return "notes" }
 
 func dictToApp(d Dict) app.ZHEntry {

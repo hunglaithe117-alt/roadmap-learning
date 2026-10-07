@@ -75,8 +75,9 @@ func Test_sync_mutation_returns_business_error_instead_of_panicking(t *testing.T
 	// Mã ĐÚNG NGHĨA, không phải mã "thoát assert ở trên".
 	//
 	// Gate M6 nêu nghi ngờ 409 ở đây được chọn chỉ để tránh INTERNAL chứ không
-	// vì đúng ngữ nghĩa. M7b đổi sang 501 (Not Implemented) — cùng nghĩa với
-	// `/api/backup` khi chưa bật. 409 nghĩa là "dữ liệu tôi xung đột với peer",
+	// vì đúng ngữ nghĩa. M7b đổi sang 501 (Not Implemented) vì "chưa cấu hình
+	// nguồn snapshot" đúng nghĩa là server chưa có cách phục vụ việc này.
+	// 409 nghĩa là "dữ liệu tôi xung đột với peer",
 	// mà ở đây KHÔNG có peer nào để xung đột; 503 nghĩa là "tạm thời, thử lại
 	// sau", mà thiếu cấu hình thì thử lại vô ích.
 	require.Equal(t, "NOT_IMPLEMENTED", string(resp.Sync.Error.Code),

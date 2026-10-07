@@ -2,16 +2,7 @@ package roadmap
 
 import "strings"
 
-// Slugify biến tiêu đề tiếng Việt/Anh/Trung thành slug [a-z0-9-]:
-//  1. bỏ dấu tiếng Việt + Latin-1 ("tự học" → "tu hoc")
-//  2. ký tự a-z/0-9 giữ nguyên; còn lại (chữ Trung, ký tự đặc biệt) gộp
-//     thành 1 dấu '-'
-//  3. cắt '-' đầu/cuối, cắt còn tối đa 64 ký tự (giới hạn của ValidateSlug ở
-//     application/roadmap).
-//
-// Bảng bỏ dấu tự chứa thay vì `unicode/norm` — GOROOT của máy build này bị cắt
-// bớt stdlib (thiếu package `norm`), và thêm dependency cho việc slugify là
-// không đáng. Port nguyên vẹn từ `api/roadmap_seed.go` v1.
+// Slugify converts a title into an ASCII slug [a-z0-9-] capped at 64 characters.
 func Slugify(s string) string {
 	var b strings.Builder
 	dash := false
@@ -42,8 +33,7 @@ func isSlugRune(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
 }
 
-// latinBase: ký tự có dấu → ký tự gốc. Đủ 10 nhóm nguyên âm tiếng Việt
-// (a ă â e ê i o ô ơ u ư y, mỗi nhóm 5 sắc/huyền/hỏi/ngã/nặng) + đ/Đ.
+// latinBase maps accented Vietnamese and Latin-1 characters to base runes.
 var latinBase = buildLatinBase()
 
 func buildLatinBase() map[rune]rune {
